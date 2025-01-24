@@ -6,7 +6,9 @@ import (
 	"fmt"
 	"github.com/gigcodes/launch-agent/config"
 	"github.com/gigcodes/launch-agent/logger"
+	"github.com/gigcodes/launch-agent/model"
 	"github.com/gigcodes/launch-agent/psutil"
+	"github.com/spf13/viper"
 	"github.com/urfave/cli/v3"
 	"os"
 )
@@ -93,6 +95,24 @@ func initApplication() error {
 }
 
 func backup(modelNames []string) error {
-	fmt.Println(modelNames)
+	var models []*model.Model
+	if len(modelNames) == 0 {
+		// perform all
+		models = model.GetModels()
+	} else {
+		for _, name := range modelNames {
+			if m := model.GetModelByName(name); m == nil {
+				return fmt.Errorf("model %s not found in %s", name, viper.ConfigFileUsed())
+			} else {
+				models = append(models, m)
+			}
+		}
+	}
+
+	for _, m := range models {
+		if err := m.Perform(); err != nil {
+			logger.Tag(fmt.Sprintf("Model %s", m.Config.Name)).Error(err)
+		}
+	}
 	return nil
 }
