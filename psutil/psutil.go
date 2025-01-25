@@ -63,7 +63,7 @@ func Fetch() (*Psutil, error) {
 	return psutil, nil
 }
 
-func pulse(data *Psutil) {
+func Pulse(data *Psutil) {
 	webhook := notifier.NewWebhook()
 
 	payload := map[string]interface{}{

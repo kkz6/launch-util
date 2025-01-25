@@ -47,7 +47,7 @@ func (s *Webhook) buildBody(payload interface{}) ([]byte, error) {
 
 // Notify sends a notification using the webhook URL with arbitrary payload
 func (s *Webhook) Notify(payload interface{}) error {
-	logger := s.getLogger()
+	loggerT := s.getLogger()
 
 	// Use the webhook URL from config
 	url := s.webhookURL
@@ -58,10 +58,10 @@ func (s *Webhook) Notify(payload interface{}) error {
 		return err
 	}
 
-	logger.Infof("Sending notification to %s...", url)
+	loggerT.Infof("Sending notification to %s...", url)
 	req, err := http.NewRequest(s.method, url, strings.NewReader(string(body)))
 	if err != nil {
-		logger.Error(err)
+		loggerT.Error(err)
 		return err
 	}
 
@@ -79,7 +79,7 @@ func (s *Webhook) Notify(payload interface{}) error {
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		logger.Error(err)
+		loggerT.Error(err)
 		return err
 	}
 	defer resp.Body.Close()
@@ -95,10 +95,10 @@ func (s *Webhook) Notify(payload interface{}) error {
 
 	// Check the result of the request
 	if resp.StatusCode != 200 {
-		logger.Errorf("Notification failed. Status: %d, Response: %s", resp.StatusCode, string(responseBody))
+		loggerT.Errorf("Notification failed. Status: %d, Response: %s", resp.StatusCode, string(responseBody))
 		return fmt.Errorf("status: %d, body: %s", resp.StatusCode, string(responseBody))
 	}
 
-	logger.Info("Notification sent successfully.")
+	loggerT.Info("Notification sent successfully.")
 	return nil
 }

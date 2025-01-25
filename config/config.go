@@ -21,11 +21,11 @@ var (
 	Exist bool
 	// Models configs
 	Models []ModelConfig
-	// GoBackupDir gobackup base dir
-	GoBackupDir string = getLaunchAgentDir()
+	// LaunchAgent launchAgent base dir
+	LaunchAgent string = getLaunchAgentDir()
 
-	PidFilePath string = filepath.Join(GoBackupDir, "launch.pid")
-	LogFilePath string = filepath.Join(GoBackupDir, "launch.log")
+	PidFilePath string = filepath.Join(LaunchAgent, "launch.pid")
+	LogFilePath string = filepath.Join(LaunchAgent, "launch.log")
 
 	wLock   = sync.Mutex{}
 	Webhook WebhookConfig
@@ -218,6 +218,11 @@ func loadConfig() error {
 	// Load webhook config
 	Webhook = WebhookConfig{}
 	Webhook.Url = viper.GetString("webhook.url")
+
+	if len(Webhook.Url) == 0 {
+		return fmt.Errorf("no webhook config found in %s", viperConfigFile)
+	}
+
 	Webhook.Method = viper.GetString("webhook.method")
 	if headers := viper.GetStringMapString("webhook.headers"); len(headers) > 0 {
 		Webhook.Headers = headers

@@ -42,9 +42,9 @@ func NewProgressBar(myLogger logger.Logger, reader *os.File) ProgressBar {
 }
 
 func (p ProgressBar) start() {
-	logger := p.logger
+	loggerT := p.logger
 
-	logger.Infof("-> Uploading (%s)...", humanize.Bytes(uint64(p.FileLength)))
+	loggerT.Infof("-> Uploading (%s)...", humanize.Bytes(uint64(p.FileLength)))
 }
 
 func (p ProgressBar) Errorf(format string, err ...any) error {
@@ -54,11 +54,11 @@ func (p ProgressBar) Errorf(format string, err ...any) error {
 }
 
 func (p ProgressBar) Done(url string) {
-	logger := p.logger
+	loggerT := p.logger
 
 	p.bar.Finish()
 	t := time.Now()
 	elapsed := t.Sub(p.startTime)
 
-	logger.Info(fmt.Sprintf("Uploaded: %s (Duration %v)", url, durafmt.Parse(elapsed).LimitFirstN(2).String()))
+	loggerT.Info(fmt.Sprintf("Uploaded: %s (Duration %v)", url, durafmt.Parse(elapsed).LimitFirstN(2).String()))
 }
