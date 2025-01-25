@@ -3,7 +3,7 @@ package notifier
 import (
 	"testing"
 
-	"github.com/longbridgeapp/assert"
+	"github.com/longbridge/assert"
 	"github.com/spf13/viper"
 )
 
