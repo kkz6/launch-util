@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"sort"
 	"time"
 
 	"github.com/gigcodes/launch-agent/config"
@@ -80,31 +79,22 @@ func newBase(model config.ModelConfig, archivePath string, storageConfig config.
 	return
 }
 
-func new(model config.ModelConfig, archivePath string, storageConfig config.SubConfig) (Base, Storage) {
+func newStorage(model config.ModelConfig, archivePath string, storageConfig config.SubConfig) (Base, Storage) {
 	base, err := newBase(model, archivePath, storageConfig)
 	if err != nil {
 		panic(err)
 	}
-
-	var s Storage
-	switch storageConfig.Type {
-	case "s3":
-		s = &S3{Base: base, Service: "s3"}
-	default:
-		logger.Errorf("[%s] storage type has not implement.", storageConfig.Type)
-	}
-
-	return base, s
+	return base, &S3{Base: base}
 }
 
 // run storage
 func runModel(model config.ModelConfig, archivePath string, storageConfig config.SubConfig) (err error) {
-	logger := logger.Tag("Storage")
+	loggerT := logger.Tag("Storage")
 
 	newFileKey := filepath.Base(archivePath)
-	base, s := new(model, archivePath, storageConfig)
+	base, s := newStorage(model, archivePath, storageConfig)
 
-	logger.Info("=> Storage | " + storageConfig.Type)
+	loggerT.Info("=> Storage | " + storageConfig.Type)
 	err = s.open()
 	if err != nil {
 		return err
@@ -138,56 +128,8 @@ func Run(model config.ModelConfig, archivePath string) (err error) {
 	}
 
 	if len(errors) != 0 {
-		return fmt.Errorf("Storage errors: %v", errors)
+		return fmt.Errorf("storage errors: %v", errors)
 	}
 
 	return nil
-}
-
-// List return file list of storage
-func List(model config.ModelConfig, parent string) (items []FileItem, err error) {
-	if storageConfig, ok := model.Storages[model.DefaultStorage]; ok {
-		_, s := new(model, "", storageConfig)
-		err = s.open()
-		if err != nil {
-			return nil, err
-		}
-		defer s.close()
-
-		if parent == "" {
-			parent = "/"
-		}
-
-		items, err := s.list(parent)
-		if err != nil {
-			return []FileItem{}, err
-		}
-
-		// Sort items by LastModified, Filename in descending
-		sort.Slice(items, func(i, j int) bool {
-			if items[i].LastModified == items[j].LastModified {
-				return items[i].Filename > items[j].Filename
-			}
-			return items[i].LastModified.After(items[j].LastModified)
-		})
-
-		return items, nil
-	}
-
-	return []FileItem{}, fmt.Errorf("Storage %s not found", model.DefaultStorage)
-}
-
-func Download(model config.ModelConfig, fileKey string) (string, error) {
-	if storageConfig, ok := model.Storages[model.DefaultStorage]; ok {
-		_, s := new(model, "", storageConfig)
-		err := s.open()
-		if err != nil {
-			return "", err
-		}
-		defer s.close()
-
-		return s.download(fileKey)
-	}
-
-	return "", fmt.Errorf("Storage %s not found", model.DefaultStorage)
 }
