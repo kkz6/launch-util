@@ -65,3 +65,8 @@ models:
       excludes:
         - /home/ubuntu/.ssh/known_hosts
         - /etc/logrotate.d/syslog
+webhook:
+  url: http://localhost:3000/api/backup-notifiy.json
+  method: POST
+  headers:
+    Authorization: 'Bearer this-is-token'

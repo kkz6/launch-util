@@ -27,7 +27,8 @@ var (
 	PidFilePath string = filepath.Join(GoBackupDir, "launch.pid")
 	LogFilePath string = filepath.Join(GoBackupDir, "launch.log")
 
-	wLock = sync.Mutex{}
+	wLock   = sync.Mutex{}
+	Webhook = WebhookConfig{}
 
 	// UpdatedAt The config file loaded at
 	UpdatedAt time.Time
@@ -61,6 +62,12 @@ func (sc ScheduleConfig) String() string {
 	return "disabled"
 }
 
+type WebhookConfig struct {
+	Url     string
+	Method  string
+	Headers map[string]string
+}
+
 // ModelConfig for special case
 type ModelConfig struct {
 	Name           string
@@ -73,7 +80,7 @@ type ModelConfig struct {
 	Databases      map[string]SubConfig
 	Storages       map[string]SubConfig
 	DefaultStorage string
-	Notifiers      map[string]SubConfig
+	Webhook        map[string]SubConfig
 	Viper          *viper.Viper
 }
 
@@ -181,19 +188,6 @@ func loadConfig() error {
 		return err
 	}
 
-	// TODO: Here the `useTempWorkDir` and `workdir`, is not in config document. We need removed it.
-	viper.Set("useTempWorkDir", false)
-	if workdir := viper.GetString("workdir"); len(workdir) == 0 {
-		// use temp dir as workdir
-		dir, err := os.MkdirTemp("", "launch")
-		if err != nil {
-			return err
-		}
-
-		viper.Set("workdir", dir)
-		viper.Set("useTempWorkDir", true)
-	}
-
 	Exist = true
 	Models = []ModelConfig{}
 	for key := range viper.GetStringMap("models") {
@@ -207,6 +201,14 @@ func loadConfig() error {
 
 	if len(Models) == 0 {
 		return fmt.Errorf("no model found in %s", viperConfigFile)
+	}
+
+	// Load webhook config
+	Webhook = WebhookConfig{}
+	Webhook.Url = viper.GetString("webhook.url")
+	Webhook.Method = viper.GetString("webhook.method")
+	if headers := viper.GetStringMapString("webhook.headers"); len(headers) > 0 {
+		Webhook.Headers = headers
 	}
 
 	UpdatedAt = time.Now()
@@ -241,8 +243,6 @@ func loadModel(key string) (ModelConfig, error) {
 	if len(model.Storages) == 0 {
 		return ModelConfig{}, fmt.Errorf("no storage found in model %s", model.Name)
 	}
-
-	loadNotifiersConfig(&model)
 
 	return model, nil
 }
@@ -296,19 +296,6 @@ func loadStoragesConfig(model *ModelConfig) {
 	}
 	model.Storages = storageConfigs
 
-}
-
-func loadNotifiersConfig(model *ModelConfig) {
-	subViper := model.Viper.Sub("notifiers")
-	model.Notifiers = map[string]SubConfig{}
-	for key := range model.Viper.GetStringMap("notifiers") {
-		dbViper := subViper.Sub(key)
-		model.Notifiers[key] = SubConfig{
-			Name:  key,
-			Type:  dbViper.GetString("type"),
-			Viper: dbViper,
-		}
-	}
 }
 
 // GetModelConfigByName get model config by name

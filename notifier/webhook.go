@@ -87,7 +87,7 @@ func (s *Webhook) notify(title string, message string) error {
 		return err
 	}
 
-	logger.Infof("Send webhook update to %s...", url)
+	logger.Infof("Send notification to %s...", url)
 	req, err := http.NewRequest(s.method, url, strings.NewReader(string(payload)))
 	if err != nil {
 		logger.Error(err)
@@ -129,7 +129,7 @@ func (s *Webhook) notify(title string, message string) error {
 		logger.Infof("Response body: %s", string(body))
 	}
 
-	logger.Info("Update sent.")
+	logger.Info("Notification sent.")
 
 	return nil
 }

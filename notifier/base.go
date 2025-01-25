@@ -36,7 +36,12 @@ func newNotifier(name string, config config.SubConfig) (Notifier, *Base, error) 
 	base.onSuccess = base.viper.GetBool("on_success")
 	base.onFailure = base.viper.GetBool("on_failure")
 
-	return NewWebhook(base), base, nil
+	switch config.Type {
+	case "webhook":
+		return NewWebhook(base), base, nil
+	}
+
+	return nil, nil, fmt.Errorf("Notifier: %s is not supported", name)
 }
 
 func notify(model config.ModelConfig, title, message string, notifyType int) {
@@ -67,13 +72,13 @@ func notify(model config.ModelConfig, title, message string, notifyType int) {
 }
 
 func Success(model config.ModelConfig) {
-	title := fmt.Sprintf("[Launch] OK: Backup %s has successfully", model.Name)
+	title := fmt.Sprintf("[GoBackup] OK: Backup %s has successfully", model.Name)
 	message := fmt.Sprintf("Backup of %s completed successfully at %s", model.Name, time.Now().Local())
 	notify(model, title, message, notifyTypeSuccess)
 }
 
 func Failure(model config.ModelConfig, reason string) {
-	title := fmt.Sprintf("[Launch] Err: Backup %s has failed", model.Name)
+	title := fmt.Sprintf("[GoBackup] Err: Backup %s has failed", model.Name)
 	message := fmt.Sprintf("Backup of %s failed at %s:\n\n%s", model.Name, time.Now().Local(), reason)
 
 	notify(model, title, message, notifyTypeFailure)
