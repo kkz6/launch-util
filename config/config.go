@@ -188,6 +188,18 @@ func loadConfig() error {
 		return err
 	}
 
+	viper.Set("useTempWorkDir", false)
+	if workdir := viper.GetString("workdir"); len(workdir) == 0 {
+		// use temp dir as workdir
+		dir, err := os.MkdirTemp("", "launch")
+		if err != nil {
+			return err
+		}
+
+		viper.Set("workdir", dir)
+		viper.Set("useTempWorkDir", true)
+	}
+
 	Exist = true
 	Models = []ModelConfig{}
 	for key := range viper.GetStringMap("models") {

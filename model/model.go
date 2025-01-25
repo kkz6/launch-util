@@ -29,8 +29,11 @@ func (m Model) Perform() (err error) {
 			payload := map[string]interface{}{
 				"event": "backup_failure",
 				"error": err.Error(),
-				"model": m.Config,
+				"model": m.Config.Name,
 			}
+
+			fmt.Println(payload)
+
 			err := webhook.Notify(payload)
 			if err != nil {
 				fmt.Println("Error sending notification:", err)
@@ -38,9 +41,11 @@ func (m Model) Perform() (err error) {
 		} else {
 			payload := map[string]interface{}{
 				"event": "backup_success",
-				"error": err.Error(),
-				"model": m.Config,
+				"error": nil,
+				"model": m.Config.Name,
 			}
+
+			fmt.Println(payload)
 			err := webhook.Notify(payload)
 			if err != nil {
 				fmt.Println("Error sending notification:", err)
