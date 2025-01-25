@@ -70,3 +70,5 @@ webhook:
   method: POST
   headers:
     Authorization: 'Bearer this-is-token'
+pulse:
+  enabled: false

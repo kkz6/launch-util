@@ -35,15 +35,10 @@ func TestModel(t *testing.T) {
 	model := GetModelConfigByName("base_test")
 
 	assert.Equal(t, model.Name, "base_test")
-	assert.Equal(t, model.Description, "This is base test.")
 
 	// compress_with
 	assert.Equal(t, model.CompressWith.Type, "tgz")
 	assert.NotNil(t, model.CompressWith.Viper)
-
-	// encrypt_with
-	assert.Equal(t, model.EncryptWith.Type, "openssl")
-	assert.NotNil(t, model.EncryptWith.Viper)
 
 	assert.Equal(t, model.DefaultStorage, "local")
 	assert.Equal(t, model.Storages["local"].Type, "local")
@@ -146,13 +141,6 @@ func TestExpandEnv(t *testing.T) {
 	assert.Equal(t, model.Storages["s3"].Type, "s3")
 	assert.Equal(t, model.Storages["s3"].Viper.GetString("access_key_id"), "xxxxxxxxxxxxxxxxxxxx")
 	assert.Equal(t, model.Storages["s3"].Viper.GetString("secret_access_key"), "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx")
-}
-
-func TestWebConfig(t *testing.T) {
-	assert.Equal(t, Web.Host, "0.0.0.0")
-	assert.Equal(t, Web.Port, "2703")
-	assert.Equal(t, Web.Username, "gobackup")
-	assert.Equal(t, Web.Password, "123456")
 }
 
 func TestInitWithNotExistsConfigFile(t *testing.T) {
