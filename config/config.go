@@ -28,7 +28,7 @@ var (
 	LogFilePath string = filepath.Join(GoBackupDir, "launch.log")
 
 	wLock   = sync.Mutex{}
-	Webhook = WebhookConfig{}
+	Webhook WebhookConfig
 
 	// UpdatedAt The config file loaded at
 	UpdatedAt time.Time

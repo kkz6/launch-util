@@ -1,6 +1,8 @@
 package psutil
 
 import (
+	"fmt"
+	"github.com/gigcodes/launch-agent/notifier"
 	"github.com/shirou/gopsutil/v4/cpu"
 	"github.com/shirou/gopsutil/v4/disk"
 	"github.com/shirou/gopsutil/v4/mem"
@@ -59,4 +61,17 @@ func Fetch() (*Psutil, error) {
 	}
 
 	return psutil, nil
+}
+
+func pulse(data *Psutil) {
+	webhook := notifier.NewWebhook()
+
+	payload := map[string]interface{}{
+		"event": "pulse",
+		"data":  data,
+	}
+	err := webhook.Notify(payload)
+	if err != nil {
+		fmt.Println("Error sending pulse notification:", err)
+	}
 }

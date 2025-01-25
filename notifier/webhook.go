@@ -3,6 +3,7 @@ package notifier
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/gigcodes/launch-agent/config"
 	"io"
 	"net/http"
 	"strings"
@@ -11,98 +12,70 @@ import (
 )
 
 type Webhook struct {
-	Base
-
 	Service string
 
-	method          string
-	contentType     string
-	buildBody       func(title, message string) ([]byte, error)
-	buildWebhookURL func(url string) (string, error)
-	checkResult     func(status int, responseBody []byte) error
-	buildHeaders    func() map[string]string
+	method      string
+	contentType string
+	payload     interface{} // Now accepts arbitrary JSON payload
+	webhookURL  string      // The URL from config
+	headers     map[string]string
 }
 
-type webhookPayload struct {
-	Title   string `json:"title"`
-	Message string `json:"message"`
-}
-
-func NewWebhook(base *Base) *Webhook {
-	base.viper.SetDefault("method", "POST")
+func NewWebhook() *Webhook {
+	webhookConfig := config.Webhook
 
 	return &Webhook{
-		Base:        *base,
 		Service:     "Webhook",
-		method:      base.viper.GetString("method"),
+		method:      webhookConfig.Method,
 		contentType: "application/json",
-		buildBody: func(title, message string) ([]byte, error) {
-			return json.Marshal(webhookPayload{
-				Title:   title,
-				Message: message,
-			})
-		},
-		buildHeaders: func() map[string]string {
-			headers := make(map[string]string)
-			for key, value := range base.viper.GetStringMapString("headers") {
-				headers[key] = value
-			}
-
-			return headers
-		},
-		checkResult: func(status int, responseBody []byte) error {
-			if status == 200 {
-				return nil
-			}
-
-			return fmt.Errorf("status: %d, body: %s", status, string(responseBody))
-		},
+		payload:     nil, // Initially no payload
+		webhookURL:  webhookConfig.Url,
+		headers:     webhookConfig.Headers,
 	}
 }
 
+// Get the logger for this service
 func (s *Webhook) getLogger() logger.Logger {
 	return logger.Tag(fmt.Sprintf("Notifier: %s", s.Service))
 }
 
-func (s *Webhook) webhookURL() (string, error) {
-	url := s.viper.GetString("url")
-
-	if s.buildWebhookURL == nil {
-		return url, nil
-	}
-
-	return s.buildWebhookURL(url)
+// Build the payload, now accepts any JSON payload
+func (s *Webhook) buildBody(payload interface{}) ([]byte, error) {
+	// Marshal the payload into JSON format
+	return json.Marshal(payload)
 }
 
-func (s *Webhook) notify(title string, message string) error {
+// Notify sends a notification using the webhook URL with arbitrary payload
+func (s *Webhook) Notify(payload interface{}) error {
 	logger := s.getLogger()
 
-	url, err := s.webhookURL()
+	// Use the webhook URL from config
+	url := s.webhookURL
+
+	// Build the body with the provided payload
+	body, err := s.buildBody(payload)
 	if err != nil {
 		return err
 	}
 
-	payload, err := s.buildBody(title, message)
-	if err != nil {
-		return err
-	}
-
-	logger.Infof("Send notification to %s...", url)
-	req, err := http.NewRequest(s.method, url, strings.NewReader(string(payload)))
+	logger.Infof("Sending notification to %s...", url)
+	req, err := http.NewRequest(s.method, url, strings.NewReader(string(body)))
 	if err != nil {
 		logger.Error(err)
 		return err
 	}
 
+	// Set the Content-Type for the request
 	req.Header.Set("Content-Type", s.contentType)
 
-	if s.buildHeaders != nil {
-		headers := s.buildHeaders()
-		for key, value := range headers {
+	// Add custom headers from config
+	if s.headers != nil {
+		for key, value := range s.headers {
 			req.Header.Set(key, value)
 		}
 	}
 
+	// Create an HTTP client and send the request
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
@@ -111,25 +84,21 @@ func (s *Webhook) notify(title string, message string) error {
 	}
 	defer resp.Body.Close()
 
-	var body []byte
+	// Read response body
+	var responseBody []byte
 	if resp.Body != nil {
-		body, err = io.ReadAll(resp.Body)
+		responseBody, err = io.ReadAll(resp.Body)
 		if err != nil {
 			return err
 		}
 	}
 
-	if s.checkResult != nil {
-		err = s.checkResult(resp.StatusCode, body)
-		if err != nil {
-			logger.Error(err)
-			return nil
-		}
-	} else {
-		logger.Infof("Response body: %s", string(body))
+	// Check the result of the request
+	if resp.StatusCode != 200 {
+		logger.Errorf("Notification failed. Status: %d, Response: %s", resp.StatusCode, string(responseBody))
+		return fmt.Errorf("status: %d, body: %s", resp.StatusCode, string(responseBody))
 	}
 
-	logger.Info("Notification sent.")
-
+	logger.Info("Notification sent successfully.")
 	return nil
 }

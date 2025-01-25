@@ -21,12 +21,30 @@ type Model struct {
 func (m Model) Perform() (err error) {
 	tag := logger.Tag(fmt.Sprintf("Model: %s", m.Config.Name))
 
+	webhook := notifier.NewWebhook()
+
 	defer func() {
 		if err != nil {
 			tag.Error(err)
-			notifier.Failure(m.Config, err.Error())
+			payload := map[string]interface{}{
+				"event": "backup_failure",
+				"error": err.Error(),
+				"model": m.Config,
+			}
+			err := webhook.Notify(payload)
+			if err != nil {
+				fmt.Println("Error sending notification:", err)
+			}
 		} else {
-			notifier.Success(m.Config)
+			payload := map[string]interface{}{
+				"event": "backup_success",
+				"error": err.Error(),
+				"model": m.Config,
+			}
+			err := webhook.Notify(payload)
+			if err != nil {
+				fmt.Println("Error sending notification:", err)
+			}
 		}
 	}()
 
