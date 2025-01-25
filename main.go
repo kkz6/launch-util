@@ -91,6 +91,11 @@ func main() {
 			Version: "master",
 			Usage:   "Show resources usages",
 			Action: func(ctx context.Context, cmd *cli.Command) error {
+				err := initApplication()
+				if err != nil {
+					return err
+				}
+
 				psutilData, err := psutil.Fetch()
 				if err != nil {
 					logger.Fatal("Error fetching system stats:", err)

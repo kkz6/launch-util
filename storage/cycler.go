@@ -14,7 +14,6 @@ import (
 
 type PackageList []Package
 
-// When `FileKeys` is not empty, `FileKey` is the directory
 type Package struct {
 	FileKey   string    `json:"file_key"`
 	FileKeys  []string  `json:"file_keys,omitempty"`
@@ -22,7 +21,7 @@ type Package struct {
 }
 
 var (
-	cyclerPath = filepath.Join(config.GoBackupDir, "cycler")
+	cyclerPath = filepath.Join(config.LaunchAgentDir, "cycler")
 )
 
 type Cycler struct {

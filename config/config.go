@@ -21,17 +21,19 @@ var (
 	Exist bool
 	// Models configs
 	Models []ModelConfig
-	// LaunchAgent launchAgent base dir
-	LaunchAgent string = getLaunchAgentDir()
+	// LaunchAgentDir launchAgent base dir
+	LaunchAgentDir string = getLaunchAgentDir()
 
-	PidFilePath string = filepath.Join(LaunchAgent, "launch.pid")
-	LogFilePath string = filepath.Join(LaunchAgent, "launch.log")
+	PidFilePath string = filepath.Join(LaunchAgentDir, "launch.pid")
+	LogFilePath string = filepath.Join(LaunchAgentDir, "launch.log")
 
 	wLock   = sync.Mutex{}
 	Webhook WebhookConfig
 
 	// UpdatedAt The config file loaded at
 	UpdatedAt time.Time
+
+	Pulse PulseConfig
 
 	onConfigChanges = make([]func(fsnotify.Event), 0)
 )
@@ -44,6 +46,10 @@ type ScheduleConfig struct {
 	Every string `json:"every,omitempty"`
 	// At time
 	At string `json:"at,omitempty"`
+}
+
+type PulseConfig struct {
+	Enabled bool `json:"enabled,omitempty"`
 }
 
 func (sc ScheduleConfig) String() string {
@@ -214,6 +220,8 @@ func loadConfig() error {
 	if len(Models) == 0 {
 		return fmt.Errorf("no model found in %s", viperConfigFile)
 	}
+
+	Pulse.Enabled = viper.GetBool("pulse.enabled")
 
 	// Load webhook config
 	Webhook = WebhookConfig{}
