@@ -19,7 +19,7 @@ const (
 
 var (
 	configFile string
-	version    = "master"
+	version    = "0.1"
 	signal     = flag.String("s", "", `Send signal to the daemon:
   quit — graceful shutdown
   stop — fast shutdown
