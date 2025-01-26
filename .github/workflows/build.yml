@@ -18,21 +18,21 @@ jobs:
           go-version: ${{ matrix.go-version }}
           check-latest: true
       - name: Build ARM64
-        run: GOOS=linux GOARCH=arm64 go build -o launch-agent-linux-arm64 .
+        run: GOOS=linux GOARCH=arm64 go build -o launch-util-linux-arm64 .
       - name: Build ARM
-        run: GOOS=linux GOARCH=arm go build -o launch-agent-linux-arm .
+        run: GOOS=linux GOARCH=arm go build -o launch-util-linux-arm .
       - name: Build AMD64
-        run: GOOS=linux GOARCH=amd64 go build -o launch-agent-linux-amd64 .
+        run: GOOS=linux GOARCH=amd64 go build -o launch-util-linux-amd64 .
       - name: Build AMD
-        run: GOOS=linux GOARCH=386 go build -o launch-agent-linux-amd .
+        run: GOOS=linux GOARCH=386 go build -o launch-util-linux-amd .
       - name: Upload Release Asset
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
         with:
           upload_url: ${{ github.event.release.upload_url }}
-          asset_path: ./launch-agent-linux-arm64
-          asset_name: launch-agent-linux-arm64
+          asset_path: ./launch-util-linux-arm64
+          asset_name: launch-util-linux-arm64
           asset_content_type: application/octet-stream
       - name: Upload Release Asset
         uses: actions/upload-release-asset@v1
@@ -40,8 +40,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
         with:
           upload_url: ${{ github.event.release.upload_url }}
-          asset_path: ./launch-agent-linux-arm
-          asset_name: launch-agent-linux-arm
+          asset_path: ./launch-util-linux-arm
+          asset_name: launch-util-linux-arm
           asset_content_type: application/octet-stream
       - name: Upload Release Asset
         uses: actions/upload-release-asset@v1
@@ -49,8 +49,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
         with:
           upload_url: ${{ github.event.release.upload_url }}
-          asset_path: ./launch-agent-linux-amd64
-          asset_name: launch-agent-linux-amd64
+          asset_path: ./launch-util-linux-amd64
+          asset_name: launch-util-linux-amd64
           asset_content_type: application/octet-stream
       - name: Upload Release Asset
         uses: actions/upload-release-asset@v1
@@ -58,6 +58,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
         with:
           upload_url: ${{ github.event.release.upload_url }}
-          asset_path: ./launch-agent-linux-amd
-          asset_name: launch-agent-linux-amd
+          asset_path: ./launch-util-linux-amd
+          asset_name: launch-util-linux-amd
           asset_content_type: application/octet-stream
