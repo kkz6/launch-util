@@ -94,7 +94,7 @@ func (s *Webhook) Notify(payload interface{}) error {
 	}
 
 	// Check the result of the request
-	if resp.StatusCode != 200 {
+	if resp.StatusCode < 200 || resp.StatusCode > 299 {
 		loggerT.Errorf("Notification failed. Status: %d, Response: %s", resp.StatusCode, string(responseBody))
 		return fmt.Errorf("status: %d, body: %s", resp.StatusCode, string(responseBody))
 	}

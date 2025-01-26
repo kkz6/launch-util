@@ -24,9 +24,6 @@ var (
 	// LaunchAgentDir launchAgent base dir
 	LaunchAgentDir string = getLaunchAgentDir()
 
-	PidFilePath string = filepath.Join(LaunchAgentDir, "launch.pid")
-	LogFilePath string = filepath.Join(LaunchAgentDir, "launch.log")
-
 	wLock   = sync.Mutex{}
 	Webhook WebhookConfig
 
@@ -38,34 +35,8 @@ var (
 	onConfigChanges = make([]func(fsnotify.Event), 0)
 )
 
-type ScheduleConfig struct {
-	Enabled bool `json:"enabled,omitempty"`
-	// Cron expression
-	Cron string `json:"cron,omitempty"`
-	// Every
-	Every string `json:"every,omitempty"`
-	// At time
-	At string `json:"at,omitempty"`
-}
-
 type PulseConfig struct {
 	Enabled bool `json:"enabled,omitempty"`
-}
-
-func (sc ScheduleConfig) String() string {
-	if sc.Enabled {
-		if len(sc.Cron) > 0 {
-			return fmt.Sprintf("cron %s", sc.Cron)
-		} else {
-			if len(sc.At) > 0 {
-				return fmt.Sprintf("every %s at %s", sc.Every, sc.At)
-			} else {
-				return fmt.Sprintf("every %s", sc.Every)
-			}
-		}
-	}
-
-	return "disabled"
 }
 
 type WebhookConfig struct {
@@ -80,7 +51,6 @@ type ModelConfig struct {
 	WorkDir        string
 	TempPath       string
 	DumpPath       string
-	Schedule       ScheduleConfig
 	CompressWith   SubConfig
 	Archive        *viper.Viper
 	Databases      map[string]SubConfig
@@ -252,7 +222,6 @@ func loadModel(key string) (ModelConfig, error) {
 	model.TempPath = filepath.Join(viper.GetString("workdir"), fmt.Sprintf("%d", time.Now().UnixNano()))
 	model.DumpPath = filepath.Join(model.TempPath, key)
 	model.Viper = viper.Sub("models." + key)
-	model.Schedule = ScheduleConfig{Enabled: false}
 
 	model.CompressWith = SubConfig{
 		Type:  model.Viper.GetString("compress_with.type"),
@@ -261,7 +230,6 @@ func loadModel(key string) (ModelConfig, error) {
 
 	model.Archive = model.Viper.Sub("archive")
 
-	loadScheduleConfig(&model)
 	loadDatabasesConfig(&model)
 	loadStoragesConfig(&model)
 
@@ -270,21 +238,6 @@ func loadModel(key string) (ModelConfig, error) {
 	}
 
 	return model, nil
-}
-
-func loadScheduleConfig(model *ModelConfig) {
-	subViper := model.Viper.Sub("schedule")
-	model.Schedule = ScheduleConfig{Enabled: false}
-	if subViper == nil {
-		return
-	}
-
-	model.Schedule = ScheduleConfig{
-		Enabled: true,
-		Cron:    subViper.GetString("cron"),
-		Every:   subViper.GetString("every"),
-		At:      subViper.GetString("at"),
-	}
 }
 
 func loadDatabasesConfig(model *ModelConfig) {

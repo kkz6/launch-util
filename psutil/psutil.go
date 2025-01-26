@@ -11,7 +11,7 @@ import (
 )
 
 type Psutil struct {
-	Load        []float64
+	Load        float64
 	DiskTotal   string
 	DiskFree    string
 	DiskUsed    string
@@ -51,7 +51,7 @@ func Fetch() (*Psutil, error) {
 
 	// Construct the Psutil struct with the fetched data
 	psutil := &Psutil{
-		Load:        loads,
+		Load:        loads[0],
 		DiskTotal:   strconv.FormatUint(usageStat.Total, 10),
 		DiskFree:    strconv.FormatUint(usageStat.Free, 10),
 		DiskUsed:    strconv.FormatUint(usageStat.Used, 10),
