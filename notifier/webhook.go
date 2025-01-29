@@ -62,7 +62,7 @@ func (s *Webhook) Notify(payload interface{}) error {
 	req, err := http.NewRequest(s.method, url, strings.NewReader(string(body)))
 	if err != nil {
 		loggerT.Error(err)
-		return err
+		return nil
 	}
 
 	// Set the Content-Type for the request
@@ -80,7 +80,7 @@ func (s *Webhook) Notify(payload interface{}) error {
 	resp, err := client.Do(req)
 	if err != nil {
 		loggerT.Error(err)
-		return err
+		return nil
 	}
 	defer resp.Body.Close()
 

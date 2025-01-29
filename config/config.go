@@ -27,6 +27,9 @@ var (
 	PidFilePath string = filepath.Join(LaunchAgentDir, "launch.pid")
 	LogFilePath string = filepath.Join(LaunchAgentDir, "launch.log")
 
+	PulsePidFilePath string = filepath.Join(LaunchAgentDir, "launch-pulse.pid")
+	PulseLogFilePath string = filepath.Join(LaunchAgentDir, "launch-pulse.log")
+
 	wLock   = sync.Mutex{}
 	Webhook WebhookConfig
 

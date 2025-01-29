@@ -14,15 +14,20 @@ import (
 )
 
 var (
-	mycron     *gocron.Scheduler
-	dbcron     *gocron.Scheduler
-	pulseMutex sync.Mutex
-	modelMutex sync.Mutex
+	mycron *gocron.Scheduler
+	dbcron *gocron.Scheduler
 )
 
 func init() {
 	config.OnConfigChange(func(in fsnotify.Event) {
-		Restart()
+		err := Restart()
+		if err != nil {
+			return
+		}
+		errT := RestartPulse()
+		if errT != nil {
+			return
+		}
 	})
 }
 
@@ -30,26 +35,9 @@ func init() {
 func Start() error {
 	logger := superlogger.Tag("Scheduler")
 
-	mycron = gocron.NewScheduler(time.Local)
-
 	dbcron = gocron.NewScheduler(time.Local)
 
-	if config.Pulse.Enabled {
-		logger.Info("Launch pulse initiated")
-		if _, err := mycron.Every(5).Minutes().Do(func() {
-			defer pulseMutex.Unlock()
-
-			pulseMutex.Lock()
-			psutilData, err := psutil.Fetch()
-			if err != nil {
-				logger.Fatal("Error fetching system stats:", err)
-			}
-
-			psutil.Pulse(psutilData)
-		}); err != nil {
-			logger.Errorf("Failed to register job func: %s", err.Error())
-		}
-	}
+	db := sync.Mutex{}
 
 	for _, modelConfig := range config.Models {
 		if !modelConfig.Schedule.Enabled {
@@ -66,14 +54,14 @@ func Start() error {
 			if len(modelConfig.Schedule.At) > 0 {
 				scheduler = scheduler.At(modelConfig.Schedule.At)
 			} else {
-				// If no $at present, delay start cron job with $eveny duration
+				// If no $at present, delay start cron job with $every duration
 				startDuration, _ := time.ParseDuration(modelConfig.Schedule.Every)
 				scheduler = scheduler.StartAt(time.Now().Add(startDuration))
 			}
 		}
 
 		if _, err := scheduler.Do(func(modelConfig config.ModelConfig) {
-			defer modelMutex.Unlock()
+			defer db.Unlock()
 			logger := superlogger.Tag(fmt.Sprintf("Scheduler: %s", modelConfig.Name))
 
 			logger.Info("Performing...")
@@ -81,7 +69,7 @@ func Start() error {
 			m := model.Model{
 				Config: modelConfig,
 			}
-			modelMutex.Lock()
+			db.Lock()
 			if err := m.Perform(); err != nil {
 				logger.Errorf("Failed to perform: %s", err.Error())
 			}
@@ -91,8 +79,40 @@ func Start() error {
 		}
 	}
 
-	mycron.StartAsync()
 	dbcron.StartAsync()
+
+	return nil
+}
+
+func StartPulse() error {
+	logger := superlogger.Tag("Pulse Scheduler")
+
+	mycron = gocron.NewScheduler(time.Local)
+
+	mu := sync.Mutex{}
+
+	if config.Pulse.Enabled {
+		logger.Info("Launch pulse initiated")
+
+		if _, err := mycron.Every("5s").StartImmediately().Do(func() {
+			defer mu.Unlock()
+
+			mu.Lock()
+			logger.Info("Launch pulse initiated")
+
+			psutilData, err := psutil.Fetch()
+
+			if err != nil {
+				logger.Fatal("Error fetching system stats:", err)
+			}
+
+			psutil.Pulse(psutilData)
+		}); err != nil {
+			logger.Errorf("Failed to register job func: %s", err.Error())
+		}
+	}
+
+	mycron.StartAsync()
 
 	return nil
 }
@@ -104,9 +124,21 @@ func Restart() error {
 	return Start()
 }
 
+func RestartPulse() error {
+	logger := superlogger.Tag("Pulse Scheduler")
+	logger.Info("Reloading...")
+	StopPulse()
+	return StartPulse()
+}
+
 func Stop() {
+	if dbcron != nil {
+		dbcron.Stop()
+	}
+}
+
+func StopPulse() {
 	if mycron != nil {
 		mycron.Stop()
-		dbcron.Stop()
 	}
 }
