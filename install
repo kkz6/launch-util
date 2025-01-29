@@ -53,6 +53,6 @@ else
   sudo mv "${bin}" "${dest_dir}"
 fi
 
-mkdir -p ~/.gobackup
+mkdir -p ~/.launcher
 
 echo "${bin} ${version} has been installed."
