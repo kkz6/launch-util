@@ -24,6 +24,9 @@ var (
 	// LaunchAgentDir launchAgent base dir
 	LaunchAgentDir string = getLaunchAgentDir()
 
+	PidFilePath string = filepath.Join(LaunchAgentDir, "launch.pid")
+	LogFilePath string = filepath.Join(LaunchAgentDir, "launch.log")
+
 	wLock   = sync.Mutex{}
 	Webhook WebhookConfig
 

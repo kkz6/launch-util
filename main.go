@@ -7,10 +7,12 @@ import (
 	"github.com/gigcodes/launch-agent/config"
 	"github.com/gigcodes/launch-agent/logger"
 	"github.com/gigcodes/launch-agent/model"
-	"github.com/gigcodes/launch-agent/psutil"
+	"github.com/gigcodes/launch-agent/scheduler"
+	"github.com/sevlyar/go-daemon"
 	"github.com/spf13/viper"
 	"github.com/urfave/cli/v3"
 	"os"
+	"syscall"
 )
 
 const (
@@ -25,6 +27,23 @@ var (
   stop — fast shutdown
   reload — reloading the configuration file`)
 )
+
+func termHandler(os.Signal) error {
+	logger.Info("Received QUIT signal, exiting...")
+	scheduler.Stop()
+	os.Exit(0)
+	return nil
+}
+
+func reloadHandler(os.Signal) error {
+	logger.Info("Reloading config...")
+	err := config.Init(configFile)
+	if err != nil {
+		logger.Error(err)
+	}
+
+	return nil
+}
 
 func buildFlags(flags []cli.Flag) []cli.Flag {
 	return append(flags, &cli.StringFlag{
@@ -41,6 +60,10 @@ func main() {
 	app.Name = "launch-agent"
 	app.Version = version
 	app.Usage = usage
+
+	daemon.AddCommand(daemon.StringFlag(signal, "quit"), syscall.SIGQUIT, termHandler)
+	daemon.AddCommand(daemon.StringFlag(signal, "stop"), syscall.SIGTERM, termHandler)
+	daemon.AddCommand(daemon.StringFlag(signal, "reload"), syscall.SIGHUP, reloadHandler)
 
 	app.Commands = []*cli.Command{
 		{
@@ -63,22 +86,45 @@ func main() {
 			},
 		},
 		{
-			Name:    "pulse",
+			Name:    "start:pulse",
 			Version: "master",
 			Usage:   "Show resources usages",
 			Action: func(ctx context.Context, cmd *cli.Command) error {
-				err := initApplication()
+				fmt.Println("Launch pulse starting...")
+
+				args := []string{"launch", "run"}
+				if len(configFile) != 0 {
+					args = append(args, "--config", configFile)
+				}
+
+				dm := &daemon.Context{
+					PidFileName: config.PidFilePath,
+					PidFilePerm: 0644,
+					WorkDir:     "./",
+					Args:        args,
+				}
+
+				d, err := dm.Reborn()
+				if err != nil {
+					return fmt.Errorf("start failed, please check is there another instance running: %w", err)
+				}
+				if d != nil {
+					return nil
+				}
+
+				defer dm.Release() //nolint:errcheck
+
+				logger.SetLogger(config.LogFilePath)
+
+				err = initApplication()
 				if err != nil {
 					return err
 				}
 
-				psutilData, err := psutil.Fetch()
-				if err != nil {
-					logger.Fatal("Error fetching system stats:", err)
-					return nil
+				if err := scheduler.Start(); err != nil {
+					return fmt.Errorf("failed to start scheduler: %w", err)
 				}
 
-				psutil.Pulse(psutilData)
 				return nil
 			},
 		},
