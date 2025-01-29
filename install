@@ -26,7 +26,7 @@ fi
 
 platform="$(uname | tr "[A-Z]" "[a-z]")"  # Linux => linux
 arch="$(uname -m | sed 's/x86_64/amd64/' | sed 's/aarch64/arm64/')" # x86_64 => amd64, aarch64 => arm64
-package="launch-util-${platform}-${arch}.tar.gz"
+package="launch-util-${platform}-${arch}"
 package_url="https://github.com/${repo}/releases/download/${version}/${package}"
 bin="launch-agent"
 dest_dir="/usr/local/bin"
