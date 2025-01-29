@@ -1,6 +1,8 @@
 package scheduler
 
 import (
+	"fmt"
+	"github.com/gigcodes/launch-agent/model"
 	"github.com/gigcodes/launch-agent/psutil"
 	"sync"
 	"time"
@@ -12,7 +14,10 @@ import (
 )
 
 var (
-	mycron *gocron.Scheduler
+	mycron     *gocron.Scheduler
+	dbcron     *gocron.Scheduler
+	pulseMutex sync.Mutex
+	modelMutex sync.Mutex
 )
 
 func init() {
@@ -27,19 +32,14 @@ func Start() error {
 
 	mycron = gocron.NewScheduler(time.Local)
 
-	mu := sync.Mutex{}
+	dbcron = gocron.NewScheduler(time.Local)
 
 	if config.Pulse.Enabled {
 		logger.Info("Launch pulse initiated")
+		if _, err := mycron.Every(5).Minutes().Do(func() {
+			defer pulseMutex.Unlock()
 
-		var scheduler *gocron.Scheduler
-
-		scheduler = mycron.Every(5).Minute()
-
-		if _, err := scheduler.Do(func() {
-			defer mu.Unlock()
-
-			mu.Lock()
+			pulseMutex.Lock()
 			psutilData, err := psutil.Fetch()
 			if err != nil {
 				logger.Fatal("Error fetching system stats:", err)
@@ -51,7 +51,48 @@ func Start() error {
 		}
 	}
 
+	for _, modelConfig := range config.Models {
+		if !modelConfig.Schedule.Enabled {
+			continue
+		}
+
+		logger.Info(fmt.Sprintf("Register %s with (%s)", modelConfig.Name, modelConfig.Schedule.String()))
+
+		var scheduler *gocron.Scheduler
+		if modelConfig.Schedule.Cron != "" {
+			scheduler = dbcron.Cron(modelConfig.Schedule.Cron)
+		} else {
+			scheduler = dbcron.Every(modelConfig.Schedule.Every)
+			if len(modelConfig.Schedule.At) > 0 {
+				scheduler = scheduler.At(modelConfig.Schedule.At)
+			} else {
+				// If no $at present, delay start cron job with $eveny duration
+				startDuration, _ := time.ParseDuration(modelConfig.Schedule.Every)
+				scheduler = scheduler.StartAt(time.Now().Add(startDuration))
+			}
+		}
+
+		if _, err := scheduler.Do(func(modelConfig config.ModelConfig) {
+			defer modelMutex.Unlock()
+			logger := superlogger.Tag(fmt.Sprintf("Scheduler: %s", modelConfig.Name))
+
+			logger.Info("Performing...")
+
+			m := model.Model{
+				Config: modelConfig,
+			}
+			modelMutex.Lock()
+			if err := m.Perform(); err != nil {
+				logger.Errorf("Failed to perform: %s", err.Error())
+			}
+			logger.Info("Done.")
+		}, modelConfig); err != nil {
+			logger.Errorf("Failed to register job func: %s", err.Error())
+		}
+	}
+
 	mycron.StartAsync()
+	dbcron.StartAsync()
 
 	return nil
 }
@@ -66,5 +107,6 @@ func Restart() error {
 func Stop() {
 	if mycron != nil {
 		mycron.Stop()
+		dbcron.Stop()
 	}
 }

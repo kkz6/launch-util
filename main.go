@@ -86,11 +86,11 @@ func main() {
 			},
 		},
 		{
-			Name:    "start:pulse",
+			Name:    "start",
 			Version: "master",
 			Usage:   "Show resources usages",
 			Action: func(ctx context.Context, cmd *cli.Command) error {
-				fmt.Println("Launch pulse starting...")
+				fmt.Println("Launch agent starting...")
 
 				args := []string{"launch", "run"}
 				if len(configFile) != 0 {
