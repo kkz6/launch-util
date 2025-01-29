@@ -9,20 +9,59 @@ on:
     types: [created]
 
 jobs:
-  build-go-binary:
+  build:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        goos: [ linux, darwin ]
-        goarch: [ amd64, arm64 ]
-        exclude:
-          - goarch: arm64
+        go-version: ["1.21"]
     steps:
-      - uses: actions/checkout@v3
-      - uses: wangyoucao577/go-release-action@v1.30
+      - uses: actions/checkout@v4
+      - name: Setup Go
+        uses: actions/setup-go@v4
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          goos: ${{ matrix.goos }}
-          goarch: ${{ matrix.goarch }}
-          goversion: 1.23
-          binary_name: "launch-util"
+          go-version: ${{ matrix.go-version }}
+          check-latest: true
+      - name: Build ARM64
+        run: GOOS=linux GOARCH=arm64 go build -o launch-util-linux-arm64 .
+      - name: Build ARM
+        run: GOOS=linux GOARCH=arm go build -o launch-util-linux-arm .
+      - name: Build AMD64
+        run: GOOS=linux GOARCH=amd64 go build -o launch-util-linux-amd64 .
+      - name: Build AMD
+        run: GOOS=linux GOARCH=386 go build -o launch-util-linux-amd .
+      - name: Upload Release Asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: ./launch-util-linux-arm64
+          asset_name: launch-util-linux-arm64
+          asset_content_type: application/octet-stream
+      - name: Upload Release Asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: ./launch-util-linux-arm
+          asset_name: launch-util-linux-arm
+          asset_content_type: application/octet-stream
+      - name: Upload Release Asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: ./launch-util-linux-amd64
+          asset_name: launch-util-linux-amd64
+          asset_content_type: application/octet-stream
+      - name: Upload Release Asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: ./launch-util-linux-amd
+          asset_name: launch-util-linux-amd
+          asset_content_type: application/octet-stream
