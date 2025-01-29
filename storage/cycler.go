@@ -7,13 +7,14 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gigcodes/launch-agent/config"
-	"github.com/gigcodes/launch-agent/helper"
-	"github.com/gigcodes/launch-agent/logger"
+	"github.com/gigcodes/launch-util/config"
+	"github.com/gigcodes/launch-util/helper"
+	"github.com/gigcodes/launch-util/logger"
 )
 
 type PackageList []Package
 
+// When `FileKeys` is not empty, `FileKey` is the directory
 type Package struct {
 	FileKey   string    `json:"file_key"`
 	FileKeys  []string  `json:"file_keys,omitempty"`

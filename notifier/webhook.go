@@ -3,12 +3,12 @@ package notifier
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/gigcodes/launch-agent/config"
+	"github.com/gigcodes/launch-util/config"
 	"io"
 	"net/http"
 	"strings"
 
-	"github.com/gigcodes/launch-agent/logger"
+	"github.com/gigcodes/launch-util/logger"
 )
 
 type Webhook struct {

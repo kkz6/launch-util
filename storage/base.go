@@ -2,13 +2,12 @@ package storage
 
 import (
 	"fmt"
+	"github.com/gigcodes/launch-util/config"
+	"github.com/gigcodes/launch-util/logger"
+	"github.com/spf13/viper"
 	"os"
 	"path/filepath"
 	"time"
-
-	"github.com/gigcodes/launch-agent/config"
-	"github.com/gigcodes/launch-agent/logger"
-	"github.com/spf13/viper"
 )
 
 // Base storage
@@ -79,22 +78,69 @@ func newBase(model config.ModelConfig, archivePath string, storageConfig config.
 	return
 }
 
-func newStorage(model config.ModelConfig, archivePath string, storageConfig config.SubConfig) (Base, Storage) {
+func new(model config.ModelConfig, archivePath string, storageConfig config.SubConfig) (Base, Storage) {
 	base, err := newBase(model, archivePath, storageConfig)
 	if err != nil {
 		panic(err)
 	}
-	return base, &S3{Base: base}
+
+	var s Storage
+	switch storageConfig.Type {
+	case "local":
+		s = &Local{Base: base}
+	case "webdav":
+		s = &WebDAV{Base: base}
+	case "ftp":
+		s = &FTP{Base: base}
+	case "scp":
+		s = &SCP{Base: base}
+	case "sftp":
+		s = &SFTP{Base: base}
+	case "oss":
+		s = &S3{Base: base, Service: "oss"}
+	case "gcs":
+		s = &GCS{Base: base}
+	case "s3":
+		s = &S3{Base: base, Service: "s3"}
+	case "minio":
+		s = &S3{Base: base, Service: "minio"}
+	case "b2":
+		s = &S3{Base: base, Service: "b2"}
+	case "us3":
+		s = &S3{Base: base, Service: "us3"}
+	case "cos":
+		s = &S3{Base: base, Service: "cos"}
+	case "kodo":
+		s = &S3{Base: base, Service: "kodo"}
+	case "r2":
+		s = &S3{Base: base, Service: "r2"}
+	case "spaces":
+		s = &S3{Base: base, Service: "spaces"}
+	case "bos":
+		s = &S3{Base: base, Service: "bos"}
+	case "obs":
+		s = &S3{Base: base, Service: "obs"}
+	case "tos":
+		s = &S3{Base: base, Service: "tos"}
+	case "upyun":
+		s = &S3{Base: base, Service: "upyun"}
+	case "azure":
+		s = &Azure{Base: base}
+	default:
+		logger.Errorf("[%s] storage type has not implement.", storageConfig.Type)
+	}
+
+	return base, s
 }
 
 // run storage
 func runModel(model config.ModelConfig, archivePath string, storageConfig config.SubConfig) (err error) {
-	loggerT := logger.Tag("Storage")
+	logger := logger.Tag("Storage")
 
 	newFileKey := filepath.Base(archivePath)
-	base, s := newStorage(model, archivePath, storageConfig)
+	base, s := new(model, archivePath, storageConfig)
 
-	loggerT.Info("=> Storage | " + storageConfig.Type)
+	logger.Info("=> Storage | " + storageConfig.Type)
 	err = s.open()
 	if err != nil {
 		return err
@@ -128,7 +174,7 @@ func Run(model config.ModelConfig, archivePath string) (err error) {
 	}
 
 	if len(errors) != 0 {
-		return fmt.Errorf("storage errors: %v", errors)
+		return fmt.Errorf("Storage errors: %v", errors)
 	}
 
 	return nil

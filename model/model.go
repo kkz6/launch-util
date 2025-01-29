@@ -2,13 +2,13 @@ package model
 
 import (
 	"fmt"
-	"github.com/gigcodes/launch-agent/archive"
-	"github.com/gigcodes/launch-agent/compressor"
-	"github.com/gigcodes/launch-agent/config"
-	"github.com/gigcodes/launch-agent/database"
-	"github.com/gigcodes/launch-agent/logger"
-	"github.com/gigcodes/launch-agent/notifier"
-	"github.com/gigcodes/launch-agent/storage"
+	"github.com/gigcodes/launch-util/archive"
+	"github.com/gigcodes/launch-util/compressor"
+	"github.com/gigcodes/launch-util/config"
+	"github.com/gigcodes/launch-util/database"
+	"github.com/gigcodes/launch-util/logger"
+	"github.com/gigcodes/launch-util/notifier"
+	"github.com/gigcodes/launch-util/storage"
 	"github.com/spf13/viper"
 	"os"
 )

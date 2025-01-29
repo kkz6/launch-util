@@ -5,8 +5,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/gigcodes/launch-agent/helper"
-	"github.com/gigcodes/launch-agent/logger"
+	"github.com/gigcodes/launch-util/helper"
+	"github.com/gigcodes/launch-util/logger"
 )
 
 // SQLite database

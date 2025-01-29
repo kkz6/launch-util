@@ -5,9 +5,9 @@ import (
 	"path"
 	"path/filepath"
 
-	"github.com/gigcodes/launch-agent/config"
-	"github.com/gigcodes/launch-agent/helper"
-	"github.com/gigcodes/launch-agent/logger"
+	"github.com/gigcodes/launch-util/config"
+	"github.com/gigcodes/launch-util/helper"
+	"github.com/gigcodes/launch-util/logger"
 )
 
 // Run archive

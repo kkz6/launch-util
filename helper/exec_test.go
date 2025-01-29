@@ -3,7 +3,7 @@ package helper
 import (
 	"testing"
 
-	"github.com/longbridge/assert"
+	"github.com/longbridgeapp/assert"
 )
 
 func TestExec(t *testing.T) {

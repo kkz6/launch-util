@@ -3,13 +3,13 @@ package storage
 import (
 	"testing"
 
-	"github.com/gigcodes/launch-agent/config"
-	"github.com/longbridge/assert"
+	"github.com/gigcodes/launch-util/config"
+	"github.com/longbridgeapp/assert"
 )
 
 func TestBase_newBase(t *testing.T) {
 	model := config.ModelConfig{}
-	archivePath := "/tmp/launch/test-storage/foo.zip"
+	archivePath := "/tmp/gobackup/test-storeage/foo.zip"
 	s, _ := newBase(model, archivePath, config.SubConfig{})
 
 	assert.Equal(t, s.archivePath, archivePath)

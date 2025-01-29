@@ -8,7 +8,7 @@ import (
 
 	"github.com/cheggaaa/pb/v3"
 	"github.com/dustin/go-humanize"
-	"github.com/gigcodes/launch-agent/logger"
+	"github.com/gigcodes/launch-util/logger"
 	"github.com/hako/durafmt"
 )
 
@@ -42,9 +42,9 @@ func NewProgressBar(myLogger logger.Logger, reader *os.File) ProgressBar {
 }
 
 func (p ProgressBar) start() {
-	loggerT := p.logger
+	logger := p.logger
 
-	loggerT.Infof("-> Uploading (%s)...", humanize.Bytes(uint64(p.FileLength)))
+	logger.Infof("-> Uploading (%s)...", humanize.Bytes(uint64(p.FileLength)))
 }
 
 func (p ProgressBar) Errorf(format string, err ...any) error {
@@ -54,11 +54,11 @@ func (p ProgressBar) Errorf(format string, err ...any) error {
 }
 
 func (p ProgressBar) Done(url string) {
-	loggerT := p.logger
+	logger := p.logger
 
 	p.bar.Finish()
 	t := time.Now()
 	elapsed := t.Sub(p.startTime)
 
-	loggerT.Info(fmt.Sprintf("Uploaded: %s (Duration %v)", url, durafmt.Parse(elapsed).LimitFirstN(2).String()))
+	logger.Info(fmt.Sprintf("Uploaded: %s (Duration %v)", url, durafmt.Parse(elapsed).LimitFirstN(2).String()))
 }

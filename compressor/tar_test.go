@@ -3,8 +3,8 @@ package compressor
 import (
 	"testing"
 
-	"github.com/gigcodes/launch-agent/helper"
-	"github.com/longbridge/assert"
+	"github.com/gigcodes/launch-util/helper"
+	"github.com/longbridgeapp/assert"
 )
 
 func TestTar_options(t *testing.T) {

@@ -9,11 +9,11 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/gigcodes/launch-agent/logger"
+	"github.com/gigcodes/launch-util/logger"
 )
 
 var (
-	spaceRegexp = regexp.MustCompile(`\s+`)
+	spaceRegexp = regexp.MustCompile(`[\s]+`)
 )
 
 // Exec cli commands

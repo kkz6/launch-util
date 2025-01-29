@@ -1,13 +1,13 @@
 package database
 
 import (
-	"github.com/gigcodes/launch-agent/config"
+	"github.com/gigcodes/launch-util/config"
 	"github.com/spf13/viper"
 
 	// "github.com/spf13/viper"
 	"testing"
 
-	"github.com/longbridge/assert"
+	"github.com/longbridgeapp/assert"
 )
 
 func TestMariaDB_init(t *testing.T) {

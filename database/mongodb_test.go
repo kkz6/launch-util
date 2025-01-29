@@ -4,8 +4,8 @@ import (
 	// "github.com/spf13/viper"
 	"testing"
 
-	"github.com/gigcodes/launch-agent/config"
-	"github.com/longbridge/assert"
+	"github.com/gigcodes/launch-util/config"
+	"github.com/longbridgeapp/assert"
 	"github.com/spf13/viper"
 )
 

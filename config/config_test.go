@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/longbridge/assert"
+	"github.com/longbridgeapp/assert"
 )
 
 var (
@@ -13,14 +13,8 @@ var (
 )
 
 func init() {
-	err := os.Setenv("S3_ACCESS_KEY_ID", "xxxxxxxxxxxxxxxxxxxx")
-	if err != nil {
-		panic(err.Error())
-	}
-	err2 := os.Setenv("S3_SECRET_ACCESS_KEY", "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx")
-	if err2 != nil {
-		return
-	}
+	os.Setenv("S3_ACCESS_KEY_ID", "xxxxxxxxxxxxxxxxxxxx")
+	os.Setenv("S3_SECRET_ACCESS_KEY", "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx")
 	if err := Init(testConfigFile); err != nil {
 		panic(err.Error())
 	}
@@ -35,7 +29,6 @@ func TestModel(t *testing.T) {
 	model := GetModelConfigByName("base_test")
 
 	assert.Equal(t, model.Name, "base_test")
-
 	// compress_with
 	assert.Equal(t, model.CompressWith.Type, "tgz")
 	assert.NotNil(t, model.CompressWith.Viper)
@@ -101,9 +94,6 @@ func Test_otherModels(t *testing.T) {
 	schedule := model.Schedule
 	assert.Equal(t, true, schedule.Enabled)
 	assert.Equal(t, "", schedule.Cron)
-	assert.Equal(t, "1day", schedule.Every)
-	assert.Equal(t, "0:30", schedule.At)
-
 	model = GetModelConfigByName("test_model")
 	assert.Equal(t, false, model.Schedule.Enabled)
 }
@@ -111,14 +101,11 @@ func Test_otherModels(t *testing.T) {
 func Test_ScheduleConfig_String(t *testing.T) {
 	schedule := ScheduleConfig{
 		Enabled: true,
-		Every:   "1day",
-		At:      "0:30",
 	}
 	assert.Equal(t, schedule.String(), "every 1day at 0:30")
 
 	schedule = ScheduleConfig{
 		Enabled: true,
-		Every:   "1day",
 	}
 	assert.Equal(t, schedule.String(), "every 1day")
 

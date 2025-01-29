@@ -4,9 +4,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gigcodes/launch-agent/config"
-	"github.com/gigcodes/launch-agent/helper"
-	"github.com/longbridge/assert"
+	"github.com/gigcodes/launch-util/config"
+	"github.com/gigcodes/launch-util/helper"
+	"github.com/longbridgeapp/assert"
 )
 
 func TestRun(t *testing.T) {

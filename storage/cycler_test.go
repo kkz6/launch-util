@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/longbridge/assert"
+	"github.com/longbridgeapp/assert"
 )
 
 func TestCycler_add(t *testing.T) {

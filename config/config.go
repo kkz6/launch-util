@@ -12,8 +12,8 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/spf13/viper"
 
-	"github.com/gigcodes/launch-agent/helper"
-	"github.com/gigcodes/launch-agent/logger"
+	"github.com/gigcodes/launch-util/helper"
+	"github.com/gigcodes/launch-util/logger"
 )
 
 var (
@@ -26,9 +26,6 @@ var (
 
 	PidFilePath string = filepath.Join(LaunchAgentDir, "launch.pid")
 	LogFilePath string = filepath.Join(LaunchAgentDir, "launch.log")
-
-	PulsePidFilePath string = filepath.Join(LaunchAgentDir, "launch-pulse.pid")
-	PulseLogFilePath string = filepath.Join(LaunchAgentDir, "launch-pulse.log")
 
 	wLock   = sync.Mutex{}
 	Webhook WebhookConfig
@@ -55,22 +52,12 @@ type ScheduleConfig struct {
 	Enabled bool `json:"enabled,omitempty"`
 	// Cron expression
 	Cron string `json:"cron,omitempty"`
-	// Every
-	Every string `json:"every,omitempty"`
-	// At time
-	At string `json:"at,omitempty"`
 }
 
 func (sc ScheduleConfig) String() string {
 	if sc.Enabled {
 		if len(sc.Cron) > 0 {
 			return fmt.Sprintf("cron %s", sc.Cron)
-		} else {
-			if len(sc.At) > 0 {
-				return fmt.Sprintf("every %s at %s", sc.Every, sc.At)
-			} else {
-				return fmt.Sprintf("every %s", sc.Every)
-			}
 		}
 	}
 
@@ -285,8 +272,6 @@ func loadScheduleConfig(model *ModelConfig) {
 	model.Schedule = ScheduleConfig{
 		Enabled: true,
 		Cron:    subViper.GetString("cron"),
-		Every:   subViper.GetString("every"),
-		At:      subViper.GetString("at"),
 	}
 }
 

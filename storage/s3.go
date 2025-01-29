@@ -14,8 +14,8 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 
-	"github.com/gigcodes/launch-agent/helper"
-	"github.com/gigcodes/launch-agent/logger"
+	"github.com/gigcodes/launch-util/helper"
+	"github.com/gigcodes/launch-util/logger"
 )
 
 // S3 - Amazon S3 storage
@@ -32,8 +32,7 @@ import (
 // force_path_style:
 type S3 struct {
 	Base
-	endpoint     string
-	region       string
+	Service      string
 	bucket       string
 	path         string
 	client       *s3manager.Uploader
@@ -41,15 +40,174 @@ type S3 struct {
 	awsCfg       *aws.Config
 }
 
+func (s S3) providerName() string {
+	switch s.Service {
+	case "s3":
+		return "AWS S3"
+	case "b2":
+		return "Backblaze B2"
+	case "us3":
+		return "UCloud US3"
+	case "cos":
+		return "QCloud COS"
+	case "kodo":
+		return "Qiniu Kodo"
+	case "r2":
+		return "Cloudflare R2"
+	case "spaces":
+		return "DigitalOcean Spaces"
+	case "bos":
+		return "Baidu BOS"
+	case "oss":
+		return "Aliyun OSS"
+	case "minio":
+		return "MinIO"
+	case "obs":
+		return "Huawei OBS"
+	case "tos":
+		return "Volcengine TOS"
+	case "upyun":
+		return "UpYun"
+	}
+
+	return "AWS S3"
+}
+
+func (s S3) defaultRegion() string {
+	switch s.Service {
+	case "s3":
+		return "us-east-1"
+	case "b2":
+		return "us-east-001"
+	case "us3":
+		return "s3-cn-bj"
+	case "cos":
+		return "ap-nanjing"
+	case "kodo":
+		return "cn-east-1"
+	case "r2":
+		return "us-east-1"
+	case "spaces":
+		return "nyc1"
+	case "bos":
+		return "bj"
+	case "oss":
+		return "cn-hangzhou"
+	case "minio":
+		return "us-east-1"
+	case "obs":
+		return "cn-north-1"
+	case "tos":
+		// https://www.volcengine.com/docs/6349/107356
+		return "cn-beijing"
+	case "upyun":
+		// UpYun does not support region
+		return "none"
+	}
+
+	return "us-east-1"
+}
+
+func (s S3) defaultEndpoint() *string {
+	switch s.Service {
+	case "b2":
+		return aws.String(fmt.Sprintf("%s.backblazeb2.com", s.viper.GetString("region")))
+	case "us3":
+		return aws.String(fmt.Sprintf("%s.ufileos.com", s.viper.GetString("region")))
+	case "cos":
+		return aws.String(fmt.Sprintf("cos.%s.myqcloud.com", s.viper.GetString("region")))
+	case "kodo":
+		return aws.String(fmt.Sprintf("s3-%s.qiniucs.com", s.viper.GetString("region")))
+	case "r2":
+		return aws.String(fmt.Sprintf("%s.r2.cloudflarestorage.com", s.viper.GetString("account_id")))
+	case "spaces":
+		return aws.String(fmt.Sprintf("%s.digitaloceanspaces.com", s.viper.GetString("region")))
+	case "bos":
+		return aws.String(fmt.Sprintf("s3.%s.bcebos.com", s.viper.GetString("region")))
+	case "oss":
+		return aws.String(fmt.Sprintf("oss-%s.aliyuncs.com", s.viper.GetString("region")))
+	case "obs":
+		return aws.String(fmt.Sprintf("obs.%s.myhuaweicloud.com", s.viper.GetString("region")))
+	case "tos":
+		return aws.String(fmt.Sprintf("tos-s3-%s.volces.com", s.viper.GetString("region")))
+	case "upyun":
+		return aws.String("s3.api.upyun.com")
+	}
+
+	return aws.String("")
+}
+
+func (s *S3) defaultStorageClass() string {
+	switch s.Service {
+	case "s3":
+		return "STANDARD_IA"
+	case "b2":
+		return "STANDARD"
+	case "us3":
+		return "ARCHIVE"
+	case "cos":
+		return "STANDARD_IA"
+	case "kodo":
+		return "LINE"
+	case "r2":
+		// https://developers.cloudflare.com/r2/api/s3/api/
+		return ""
+	case "spaces":
+		// Allowed for compatibility purposes. Spaces only accepts the default value, STANDARD,
+		// and will reject other, unsupported storage class values.
+		// https://docs.digitalocean.com/reference/api/spaces-api/#upload-an-object-put
+		return "STANDARD"
+	case "bos":
+		return "STANDARD_IA"
+	case "oss":
+		// https://help.aliyun.com/document_detail/389025.html
+		// By test, Aliyun OSS only support "Standard" via S3 SDK, even we set "STANDARD_IA" or "ARCHIVE"
+		return "STANDARD_IA"
+	case "minio":
+		return ""
+	case "obs":
+		// https://support.huaweicloud.com/api-obs/obs_04_0044.html#obs_04_0044__table63485364
+		// STANDARD, STANDARD_IA, GLACIER, DEEP_ARCHIVE
+		return "STANDARD_IA"
+	case "tos":
+		// https://www.volcengine.com/docs/6349/147050
+		// STANDARD, STANDARD_IA, GLACIER_IR
+		return "STANDARD_IA"
+	case "upyun":
+		// https://help.upyun.com/knowledge-base/s3-api
+		// UpYun API only support STANDARD, so keep this in empty.
+		// And they S3 API only support upload to STANDARD (普通) bucket, it will return 403 when the bucket type is STANDARD_IA (低频).
+		return ""
+	}
+
+	return ""
+}
+
+func (s *S3) forcePathStyle() bool {
+	switch s.Service {
+	case "tos", "oss":
+		return false
+	default:
+		return true
+	}
+}
+
 func (s *S3) init() {
+	if len(s.Service) == 0 {
+		s.Service = "s3"
+	}
+
+	s.viper.SetDefault("region", s.defaultRegion())
+	s.viper.SetDefault("endpoint", s.defaultEndpoint())
 	s.viper.SetDefault("max_retries", 3)
 	s.viper.SetDefault("timeout", "300")
+	s.viper.SetDefault("storage_class", s.defaultStorageClass())
 }
 
 func (s *S3) open() (err error) {
 	s.init()
 
-	loggerT := logger.Tag("S3 Storage")
+	logger := logger.Tag(s.providerName())
 
 	cfg := aws.NewConfig()
 	endpoint := s.viper.GetString("endpoint")
@@ -58,6 +216,7 @@ func (s *S3) open() (err error) {
 		cfg.Endpoint = aws.String(endpoint)
 	}
 
+	cfg.S3ForcePathStyle = aws.Bool(s.forcePathStyle())
 	if s.viper.IsSet("force_path_style") {
 		cfg.S3ForcePathStyle = aws.Bool(s.viper.GetBool("force_path_style"))
 	}
@@ -69,7 +228,7 @@ func (s *S3) open() (err error) {
 	}
 
 	if len(accessKeyId) == 0 || len(secretAccessKey) == 0 {
-		loggerT.Warn("`access_key_id` or `secret_access_key` is empty.")
+		logger.Warn("`access_key_id` or `secret_access_key` is empty.")
 	}
 
 	cfg.Credentials = credentials.NewStaticCredentials(
@@ -102,7 +261,7 @@ func (s *S3) close() {
 }
 
 func (s *S3) upload(fileKey string) (err error) {
-	loggerT := logger.Tag("S3 Storage")
+	logger := logger.Tag(s.providerName())
 
 	var fileKeys []string
 	if len(s.fileKeys) != 0 {
@@ -123,10 +282,9 @@ func (s *S3) upload(fileKey string) (err error) {
 		if err != nil {
 			return fmt.Errorf("failed to open file %q, %v", sourcePath, err)
 		}
-
 		defer f.Close()
 
-		progress := helper.NewProgressBar(loggerT, f)
+		progress := helper.NewProgressBar(logger, f)
 
 		input := &s3manager.UploadInput{
 			Bucket: aws.String(s.bucket),
@@ -136,7 +294,7 @@ func (s *S3) upload(fileKey string) (err error) {
 
 		// Only present storage_class when it is set.
 		// Some storage backend may not support storage_class.
-		// https://github.com/gigcodes/launch-agent/issues/183
+		// https://github.com/gigcodes/launch-util/issues/183
 		if len(s.storageClass) > 0 {
 			input.StorageClass = aws.String(s.storageClass)
 		}
@@ -164,8 +322,9 @@ func (s *S3) upload(fileKey string) (err error) {
 
 		progress.Done(result.Location)
 
-		loggerT.Info("=>", fmt.Sprintf("s3://%s/%s", s.bucket, remotePath))
-
+		if s.Service == "s3" {
+			logger.Info("=>", fmt.Sprintf("s3://%s/%s", s.bucket, remotePath))
+		}
 	}
 
 	return nil
@@ -195,7 +354,7 @@ func (s *S3) list(parent string) ([]FileItem, error) {
 
 		// Only present ContinuationToken when it is set.
 		// Some S3 compatible storage like MinIO will raise error when ContinuationToken is empty.
-		// https://github.com/gigcodes/launch-agent/issues/179
+		// https://github.com/gigcodes/launch-util/issues/179
 		if len(continueToken) > 0 {
 			input.ContinuationToken = aws.String(continueToken)
 		}

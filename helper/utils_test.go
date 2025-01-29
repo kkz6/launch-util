@@ -4,7 +4,7 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/longbridge/assert"
+	"github.com/longbridgeapp/assert"
 )
 
 func TestUtils_init(t *testing.T) {

@@ -2,7 +2,7 @@ package psutil
 
 import (
 	"fmt"
-	"github.com/gigcodes/launch-agent/notifier"
+	"github.com/gigcodes/launch-util/notifier"
 	"github.com/shirou/gopsutil/v4/cpu"
 	"github.com/shirou/gopsutil/v4/disk"
 	"github.com/shirou/gopsutil/v4/mem"

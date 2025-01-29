@@ -3,7 +3,7 @@ package compressor
 import (
 	"os/exec"
 
-	"github.com/gigcodes/launch-agent/helper"
+	"github.com/gigcodes/launch-util/helper"
 )
 
 type Tar struct {

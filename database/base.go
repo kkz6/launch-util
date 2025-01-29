@@ -8,9 +8,9 @@ import (
 	"github.com/google/shlex"
 	"github.com/spf13/viper"
 
-	"github.com/gigcodes/launch-agent/config"
-	"github.com/gigcodes/launch-agent/helper"
-	"github.com/gigcodes/launch-agent/logger"
+	"github.com/gigcodes/launch-util/config"
+	"github.com/gigcodes/launch-util/helper"
+	"github.com/gigcodes/launch-util/logger"
 )
 
 // Base database
@@ -86,12 +86,20 @@ func runModel(model config.ModelConfig, dbConfig config.SubConfig) (err error) {
 		db = &MySQL{Base: base}
 	case "mariadb":
 		db = &MariaDB{Base: base}
+	case "redis":
+		db = &Redis{Base: base}
 	case "postgresql":
 		db = &PostgreSQL{Base: base}
 	case "mongodb":
 		db = &MongoDB{Base: base}
 	case "sqlite":
 		db = &SQLite{Base: base}
+	case "mssql":
+		db = &MSSQL{Base: base}
+	case "influxdb2":
+		db = &InfluxDB2{Base: base}
+	case "etcd":
+		db = &Etcd{Base: base}
 	default:
 		logger.Warn(fmt.Errorf("model: %s databases.%s config `type: %s`, but is not implement", model.Name, dbConfig.Name, dbConfig.Type))
 		return

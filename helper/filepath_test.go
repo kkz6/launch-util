@@ -5,7 +5,7 @@ import (
 	"path"
 	"testing"
 
-	"github.com/longbridge/assert"
+	"github.com/longbridgeapp/assert"
 )
 
 func TestIsExistsPath(t *testing.T) {

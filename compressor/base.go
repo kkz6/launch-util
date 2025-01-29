@@ -2,13 +2,13 @@ package compressor
 
 import (
 	"fmt"
-	"github.com/gigcodes/launch-agent/helper"
+	"github.com/gigcodes/launch-util/helper"
 	"os"
 	"path/filepath"
 	"time"
 
-	"github.com/gigcodes/launch-agent/config"
-	"github.com/gigcodes/launch-agent/logger"
+	"github.com/gigcodes/launch-util/config"
+	"github.com/gigcodes/launch-util/logger"
 	"github.com/spf13/viper"
 )
 
@@ -21,6 +21,7 @@ type Base struct {
 	viper           *viper.Viper
 }
 
+// Compressor
 type Compressor interface {
 	perform() (archivePath string, err error)
 }
@@ -40,7 +41,7 @@ func newBase(model config.ModelConfig) (base Base) {
 
 // Run compressor, return archive path
 func Run(model config.ModelConfig) (string, error) {
-	loggerT := logger.Tag("Compressor")
+	logger := logger.Tag("Compressor")
 
 	base := newBase(model)
 
@@ -82,10 +83,10 @@ func Run(model config.ModelConfig) (string, error) {
 	base.parallelProgram = parallelProgram
 	c = &Tar{Base: base}
 
-	loggerT.Info("=> Compress | " + model.CompressWith.Type)
+	logger.Info("=> Compress | " + model.CompressWith.Type)
 
 	if err := helper.MkdirP(model.DumpPath); err != nil {
-		loggerT.Errorf("Failed to mkdir dump path %s: %v", model.DumpPath, err)
+		logger.Errorf("Failed to mkdir dump path %s: %v", model.DumpPath, err)
 		return "", err
 	}
 
@@ -98,7 +99,7 @@ func Run(model config.ModelConfig) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	loggerT.Info("->", archivePath)
+	logger.Info("->", archivePath)
 
 	return archivePath, nil
 }
