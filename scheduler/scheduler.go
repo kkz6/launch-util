@@ -34,7 +34,7 @@ func Start() error {
 	if config.Pulse.Enabled {
 		logger.Info("Launch pulse initiated")
 
-		if _, err := mycron.Every(5).Seconds().StartImmediately().Do(func() {
+		if _, err := mycron.Every(5).Minutes().StartImmediately().Do(func() {
 			psutilData, err := psutil.Fetch()
 
 			if err != nil {

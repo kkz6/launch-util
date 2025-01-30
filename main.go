@@ -114,17 +114,6 @@ func main() {
 				}
 				defer dm.Release() //nolint:errcheck
 
-				logger.SetLogger(config.LogFilePath)
-
-				err = initApplication()
-				if err != nil {
-					return err
-				}
-
-				if err := scheduler.Start(); err != nil {
-					return fmt.Errorf("failed to start scheduler: %w", err)
-				}
-
 				return nil
 			},
 		},
