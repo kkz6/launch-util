@@ -8,6 +8,7 @@ import (
 	"github.com/shirou/gopsutil/v4/mem"
 	"log"
 	"strconv"
+	"time"
 )
 
 type Psutil struct {
@@ -22,7 +23,7 @@ type Psutil struct {
 
 func Fetch() (*Psutil, error) {
 	// Fetch system load average
-	loads, err := cpu.Percent(0, false)
+	loads, err := cpu.Percent(time.Second, false)
 	if err != nil {
 		log.Println("Error fetching CPU load average:", err)
 		return nil, err

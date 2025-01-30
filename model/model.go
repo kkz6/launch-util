@@ -27,9 +27,10 @@ func (m Model) Perform() (err error) {
 		if err != nil {
 			tag.Error(err)
 			payload := map[string]interface{}{
-				"event": "backup_failure",
-				"error": err.Error(),
-				"model": m.Config.Name,
+				"event":     "backup_event",
+				"error":     err.Error(),
+				"model":     m.Config.Name,
+				"databases": m.Config.GetDatabaseNames(),
 			}
 
 			fmt.Println(payload)
@@ -40,9 +41,10 @@ func (m Model) Perform() (err error) {
 			}
 		} else {
 			payload := map[string]interface{}{
-				"event": "backup_success",
-				"error": nil,
-				"model": m.Config.Name,
+				"event":     "backup_event",
+				"error":     nil,
+				"model":     m.Config.Name,
+				"databases": m.Config.GetDatabaseNames(),
 			}
 
 			fmt.Println(payload)

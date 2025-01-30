@@ -96,34 +96,10 @@ func new(model config.ModelConfig, archivePath string, storageConfig config.SubC
 		s = &SCP{Base: base}
 	case "sftp":
 		s = &SFTP{Base: base}
-	case "oss":
-		s = &S3{Base: base, Service: "oss"}
 	case "gcs":
 		s = &GCS{Base: base}
 	case "s3":
-		s = &S3{Base: base, Service: "s3"}
-	case "minio":
-		s = &S3{Base: base, Service: "minio"}
-	case "b2":
-		s = &S3{Base: base, Service: "b2"}
-	case "us3":
-		s = &S3{Base: base, Service: "us3"}
-	case "cos":
-		s = &S3{Base: base, Service: "cos"}
-	case "kodo":
-		s = &S3{Base: base, Service: "kodo"}
-	case "r2":
-		s = &S3{Base: base, Service: "r2"}
-	case "spaces":
-		s = &S3{Base: base, Service: "spaces"}
-	case "bos":
-		s = &S3{Base: base, Service: "bos"}
-	case "obs":
-		s = &S3{Base: base, Service: "obs"}
-	case "tos":
-		s = &S3{Base: base, Service: "tos"}
-	case "upyun":
-		s = &S3{Base: base, Service: "upyun"}
+		s = &S3{Base: base}
 	case "azure":
 		s = &Azure{Base: base}
 	default:

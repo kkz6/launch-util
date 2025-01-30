@@ -207,10 +207,6 @@ func loadConfig() error {
 		Models = append(Models, model)
 	}
 
-	if len(Models) == 0 {
-		return fmt.Errorf("no model found in %s", viperConfigFile)
-	}
-
 	Pulse.Enabled = viper.GetBool("pulse.enabled")
 
 	// Load webhook config
@@ -331,4 +327,12 @@ func (model *ModelConfig) GetDatabaseByName(name string) (subConfig *SubConfig) 
 		}
 	}
 	return
+}
+
+func (model *ModelConfig) GetDatabaseNames() []string {
+	var databaseNames []string
+	for name := range model.Databases {
+		databaseNames = append(databaseNames, name)
+	}
+	return databaseNames
 }

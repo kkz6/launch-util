@@ -2,6 +2,7 @@ package scheduler
 
 import (
 	"fmt"
+	"github.com/gigcodes/launch-util/psutil"
 	"sync"
 	"time"
 
@@ -29,6 +30,22 @@ func Start() error {
 	mycron = gocron.NewScheduler(time.Local)
 
 	mu := sync.Mutex{}
+
+	if config.Pulse.Enabled {
+		logger.Info("Launch pulse initiated")
+
+		if _, err := mycron.Every(5).Seconds().StartImmediately().Do(func() {
+			psutilData, err := psutil.Fetch()
+
+			if err != nil {
+				logger.Fatal("Error fetching system stats:", err)
+			}
+
+			psutil.Pulse(psutilData)
+		}); err != nil {
+			logger.Errorf("Failed to register job func: %s", err.Error())
+		}
+	}
 
 	for _, modelConfig := range config.Models {
 		if !modelConfig.Schedule.Enabled {
