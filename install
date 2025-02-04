@@ -49,10 +49,10 @@ curl -sSL "${package_url}" -o "${bin}"
 
 if test $(id -u) -eq 0; then
   mv "${bin}" "${dest_dir}"
-  chmod +x "${dest_dir}"
+  chmod +x "${bin_path}"
 else
   sudo mv "${bin}" "${dest_dir}"
-  sudo chmod +x "${dest_dir}"
+  sudo chmod +x "${bin_path}"
 fi
 
 mkdir -p ~/.launcher
