@@ -27,8 +27,7 @@ var (
 	PidFilePath string = filepath.Join(LaunchAgentDir, "launch.pid")
 	LogFilePath string = filepath.Join(LaunchAgentDir, "launch.log")
 
-	wLock   = sync.Mutex{}
-	Webhook WebhookConfig
+	wLock = sync.Mutex{}
 
 	// UpdatedAt The config file loaded at
 	UpdatedAt time.Time
@@ -39,7 +38,8 @@ var (
 )
 
 type PulseConfig struct {
-	Enabled bool `json:"enabled,omitempty"`
+	Enabled bool          `json:"enabled,omitempty"`
+	Webhook WebhookConfig `json:"webhook,omitempty"`
 }
 
 type WebhookConfig struct {
@@ -76,7 +76,7 @@ type ModelConfig struct {
 	Databases      map[string]SubConfig
 	Storages       map[string]SubConfig
 	DefaultStorage string
-	Webhook        map[string]SubConfig
+	Webhook        WebhookConfig
 	Viper          *viper.Viper
 }
 
@@ -207,19 +207,13 @@ func loadConfig() error {
 		Models = append(Models, model)
 	}
 
-	Pulse.Enabled = viper.GetBool("pulse.enabled")
-
-	// Load webhook config
-	Webhook = WebhookConfig{}
-	Webhook.Url = viper.GetString("webhook.url")
-
-	if len(Webhook.Url) == 0 {
-		return fmt.Errorf("no webhook config found in %s", viperConfigFile)
-	}
-
-	Webhook.Method = viper.GetString("webhook.method")
-	if headers := viper.GetStringMapString("webhook.headers"); len(headers) > 0 {
-		Webhook.Headers = headers
+	Pulse = PulseConfig{
+		Enabled: viper.GetBool("pulse.enabled"),
+		Webhook: WebhookConfig{
+			Url:     viper.GetString("pulse.webhook.url"),
+			Method:  viper.GetString("pulse.webhook.method"),
+			Headers: viper.GetStringMapString("pulse.webhook.headers"),
+		},
 	}
 
 	UpdatedAt = time.Now()
@@ -246,6 +240,12 @@ func loadModel(key string) (ModelConfig, error) {
 	}
 
 	model.Archive = model.Viper.Sub("archive")
+
+	model.Webhook = WebhookConfig{
+		Url:     model.Viper.GetString("webhook.url"),
+		Method:  model.Viper.GetString("webhook.method"),
+		Headers: model.Viper.GetStringMapString("webhook.headers"),
+	}
 
 	loadScheduleConfig(&model)
 	loadDatabasesConfig(&model)

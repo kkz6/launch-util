@@ -3,10 +3,11 @@ package notifier
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/gigcodes/launch-util/config"
 	"io"
 	"net/http"
 	"strings"
+
+	"github.com/gigcodes/launch-util/config"
 
 	"github.com/gigcodes/launch-util/logger"
 )
@@ -21,16 +22,15 @@ type Webhook struct {
 	headers     map[string]string
 }
 
-func NewWebhook() *Webhook {
-	webhookConfig := config.Webhook
+func NewWebhook(webhook config.WebhookConfig) *Webhook {
 
 	return &Webhook{
 		Service:     "Webhook",
-		method:      webhookConfig.Method,
+		method:      webhook.Method,
 		contentType: "application/json",
 		payload:     nil, // Initially no payload
-		webhookURL:  webhookConfig.Url,
-		headers:     webhookConfig.Headers,
+		webhookURL:  webhook.Url,
+		headers:     webhook.Headers,
 	}
 }
 

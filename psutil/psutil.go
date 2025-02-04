@@ -2,6 +2,7 @@ package psutil
 
 import (
 	"fmt"
+	"github.com/gigcodes/launch-util/config"
 	"github.com/gigcodes/launch-util/notifier"
 	"github.com/shirou/gopsutil/v4/cpu"
 	"github.com/shirou/gopsutil/v4/disk"
@@ -65,7 +66,7 @@ func Fetch() (*Psutil, error) {
 }
 
 func Pulse(data *Psutil) {
-	webhook := notifier.NewWebhook()
+	webhook := notifier.NewWebhook(config.Pulse.Webhook)
 
 	payload := map[string]interface{}{
 		"event": "pulse",

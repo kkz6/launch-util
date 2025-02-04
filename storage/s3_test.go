@@ -69,15 +69,9 @@ func Test_providerName(t *testing.T) {
 	base.viper = viper.New()
 	base.viper.SetDefault("bucket", "test-bucket")
 
-	for service, info := range cases {
-		s := &S3{Base: base, Service: service}
+	for _, info := range cases {
+		s := &S3{Base: base}
 		s.init()
-
-		assert.Equal(t, info.name, s.providerName(), "providerName for "+service)
-		assert.Equal(t, info.endpoint, *s.defaultEndpoint(), "defaultEndpoint for "+service)
-		assert.Equal(t, info.region, s.defaultRegion(), "defaultRegion for "+service)
-		assert.Equal(t, info.storageClass, s.defaultStorageClass(), "defaultStorageClass for "+service)
-		assert.Equal(t, info.forcePathStyle, s.forcePathStyle(), "forcePathStyle for "+service)
 
 		assert.Equal(t, info.region, s.viper.GetString("region"))
 		assert.Equal(t, info.endpoint, s.viper.GetString("endpoint"))

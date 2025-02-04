@@ -2,6 +2,8 @@ package model
 
 import (
 	"fmt"
+	"os"
+
 	"github.com/gigcodes/launch-util/archive"
 	"github.com/gigcodes/launch-util/compressor"
 	"github.com/gigcodes/launch-util/config"
@@ -10,7 +12,6 @@ import (
 	"github.com/gigcodes/launch-util/notifier"
 	"github.com/gigcodes/launch-util/storage"
 	"github.com/spf13/viper"
-	"os"
 )
 
 type Model struct {
@@ -21,16 +22,17 @@ type Model struct {
 func (m Model) Perform() (err error) {
 	tag := logger.Tag(fmt.Sprintf("Model: %s", m.Config.Name))
 
-	webhook := notifier.NewWebhook()
+	webhook := notifier.NewWebhook(m.Config.Webhook)
+
+	var fileSize int64
 
 	defer func() {
 		if err != nil {
 			tag.Error(err)
 			payload := map[string]interface{}{
-				"event":     "backup_event",
-				"error":     err.Error(),
-				"model":     m.Config.Name,
-				"databases": m.Config.GetDatabaseNames(),
+				"error":  err.Error(),
+				"model":  m.Config.Name,
+				"status": "failed",
 			}
 
 			fmt.Println(payload)
@@ -41,10 +43,10 @@ func (m Model) Perform() (err error) {
 			}
 		} else {
 			payload := map[string]interface{}{
-				"event":     "backup_event",
-				"error":     nil,
-				"model":     m.Config.Name,
-				"databases": m.Config.GetDatabaseNames(),
+				"error":  nil,
+				"status": "finished",
+				"model":  m.Config.Name,
+				"size":   fileSize,
 			}
 
 			fmt.Println(payload)
@@ -79,6 +81,12 @@ func (m Model) Perform() (err error) {
 
 	// It always to use compressor, default use tar, even not enable compress.
 	archivePath, err := compressor.Run(m.Config)
+	fileInfo, err := os.Stat(archivePath)
+	if err != nil {
+		tag.Errorf("Error fetching file info: %v", err)
+	} else {
+		fileSize = fileInfo.Size()
+	}
 	if err != nil {
 		return
 	}
