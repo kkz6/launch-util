@@ -13,6 +13,7 @@ import (
 	"github.com/gigcodes/launch-util/config"
 	"github.com/gigcodes/launch-util/logger"
 	"github.com/gigcodes/launch-util/model"
+	"github.com/gigcodes/launch-util/rpc"
 	"github.com/gigcodes/launch-util/scheduler"
 )
 
@@ -134,6 +135,35 @@ func main() {
 				}
 
 				select {}
+			},
+		},
+		{
+			Name:  "status",
+			Usage: "Check Supervisor daemon statuses and send webhook response",
+			Flags: buildFlags([]cli.Flag{
+				&cli.StringSliceFlag{
+					Name:    "id",
+					Aliases: []string{"i"},
+					Usage:   "Supervisor daemon IDs to check (provide multiple IDs)",
+				},
+				&cli.StringFlag{
+					Name:  "supervisor",
+					Usage: "Supervisor XML-RPC endpoint",
+					Value: "http://localhost:9001/RPC2",
+				},
+			}),
+			Action: func(ctx *cli.Context) error {
+				daemonIDs := ctx.StringSlice("id")
+				if len(daemonIDs) == 0 {
+					return fmt.Errorf("please provide at least one daemon id using --id")
+				}
+				supervisorURL := ctx.String("supervisor")
+
+				// Call the function from the rpc package to check statuses and send webhook.
+				if err := rpc.SendDaemonStatus(daemonIDs, supervisorURL); err != nil {
+					return fmt.Errorf("failed to send daemon status: %w", err)
+				}
+				return nil
 			},
 		},
 	}

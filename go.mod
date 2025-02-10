@@ -16,6 +16,7 @@ require (
 	github.com/hako/durafmt v0.0.0-20210608085754-5c1018a4e16b
 	github.com/jlaffaye/ftp v0.1.0
 	github.com/joho/godotenv v1.4.0
+	github.com/kolo/xmlrpc v0.0.0-20220921171641-a4b6fa1dd06b
 	github.com/longbridgeapp/assert v1.1.0
 	github.com/pkg/sftp v1.13.5
 	github.com/sevlyar/go-daemon v0.1.6
