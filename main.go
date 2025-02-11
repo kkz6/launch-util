@@ -13,6 +13,7 @@ import (
 	"github.com/gigcodes/launch-util/config"
 	"github.com/gigcodes/launch-util/logger"
 	"github.com/gigcodes/launch-util/model"
+	"github.com/gigcodes/launch-util/psutil"
 	"github.com/gigcodes/launch-util/rpc"
 	"github.com/gigcodes/launch-util/scheduler"
 )
@@ -88,6 +89,32 @@ func main() {
 			},
 		},
 		{
+			Name:  "pulse",
+			Usage: "Show resources usages",
+			Action: func(ctx *cli.Context) error {
+				err := initApplication()
+				if err != nil {
+					return err
+				}
+				psutilData, err := psutil.Fetch()
+				if err != nil {
+					logger.Fatal("Error fetching system stats:", err)
+					return nil
+				}
+				fmt.Printf("System Stats:\n")
+				fmt.Printf("Load Average (1 min): %.2f\n", psutilData.Load)
+				fmt.Printf("Disk Total: %s bytes\n", psutilData.DiskTotal)
+				fmt.Printf("Disk Free: %s bytes\n", psutilData.DiskFree)
+				fmt.Printf("Disk Used: %s bytes\n", psutilData.DiskUsed)
+				fmt.Printf("Memory Total: %s bytes\n", psutilData.MemoryTotal)
+				fmt.Printf("Memory Free: %s bytes\n", psutilData.MemoryFree)
+				fmt.Printf("Memory Used: %s bytes\n", psutilData.MemoryUsed)
+
+				psutil.Pulse(psutilData)
+				return nil
+			},
+		},
+		{
 			Name:  "start",
 			Usage: "Start as daemon",
 			Flags: buildFlags([]cli.Flag{}),
@@ -156,6 +183,11 @@ func main() {
 				daemonIDs := ctx.StringSlice("id")
 				socketPath := "/var/run/supervisor.sock"
 				rpcEndpoint := ctx.String("supervisor")
+
+				err := initApplication()
+				if err != nil {
+					return err
+				}
 
 				// Call the function from the rpc package to check statuses and send webhook.
 				if err := rpc.SendDaemonStatus(daemonIDs, socketPath, rpcEndpoint); err != nil {
