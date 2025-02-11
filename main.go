@@ -144,23 +144,21 @@ func main() {
 				&cli.StringSliceFlag{
 					Name:    "id",
 					Aliases: []string{"i"},
-					Usage:   "Supervisor daemon IDs to check (provide multiple IDs)",
+					Usage:   "Supervisor daemon IDs to check (if not provided, status for all daemons will be retrieved)",
 				},
 				&cli.StringFlag{
 					Name:  "supervisor",
 					Usage: "Supervisor XML-RPC endpoint",
-					Value: "http://localhost:9001/RPC2",
+					Value: "http://localhost/RPC2",
 				},
 			}),
 			Action: func(ctx *cli.Context) error {
 				daemonIDs := ctx.StringSlice("id")
-				if len(daemonIDs) == 0 {
-					return fmt.Errorf("please provide at least one daemon id using --id")
-				}
-				supervisorURL := ctx.String("supervisor")
+				socketPath := "/var/run/supervisor.sock"
+				rpcEndpoint := ctx.String("supervisor")
 
 				// Call the function from the rpc package to check statuses and send webhook.
-				if err := rpc.SendDaemonStatus(daemonIDs, supervisorURL); err != nil {
+				if err := rpc.SendDaemonStatus(daemonIDs, socketPath, rpcEndpoint); err != nil {
 					return fmt.Errorf("failed to send daemon status: %w", err)
 				}
 				return nil
