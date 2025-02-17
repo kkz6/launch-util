@@ -15,26 +15,28 @@ import (
 
 // ProcessInfo represents the structure returned by Supervisor for a process.
 type ProcessInfo struct {
-	Name        string `xmlrpc:"name"`
-	Group       string `xmlrpc:"group"`
-	Description string `xmlrpc:"description"`
-	Start       int64  `xmlrpc:"start"`
-	Stop        int64  `xmlrpc:"stop"`
-	Now         int64  `xmlrpc:"now"`
-	Statename   string `xmlrpc:"statename"`
-	State       int    `xmlrpc:"state"`
-	Spawnerr    string `xmlrpc:"spawnerr"`
+	Name        string `xmlrpc:"name" json:"name"`
+	Group       string `xmlrpc:"group" json:"group"`
+	Description string `xmlrpc:"description" json:"description"`
+	Start       int64  `xmlrpc:"start" json:"start"`
+	Stop        int64  `xmlrpc:"stop" json:"stop"`
+	Now         int64  `xmlrpc:"now" json:"now"`
+	Statename   string `xmlrpc:"statename" json:"statename"`
+	State       int    `xmlrpc:"state" json:"state"`
+	Spawnerr    string `xmlrpc:"spawnerr" json:"spawnerr"`
+	Uptime      int64  `json:"uptime"` // Process-specific uptime
 }
 
 // DaemonStatus is the structure used for each daemon's status.
 type DaemonStatus struct {
-	DaemonID    string `json:"daemon_id"`
-	Status      string `json:"status"`
-	Error       string `json:"error,omitempty"`
-	Uptime      int64  `json:"uptime,omitempty"` // seconds
-	Group       string `json:"group,omitempty"`
-	Statename   string `json:"statename,omitempty"`
-	Description string `json:"description,omitempty"`
+	DaemonID    string        `json:"daemon_id"`
+	Status      string        `json:"status"`
+	Error       string        `json:"error,omitempty"`
+	Group       string        `json:"group,omitempty"`
+	Statename   string        `json:"statename,omitempty"`
+	Description string        `json:"description,omitempty"`
+	Processes   []ProcessInfo `json:"processes"`    // List of processes in the group
+	Uptime      int64         `json:"total_uptime"` // Highest uptime in the group
 }
 
 // newUnixSocketXMLRPCClient creates a new XML-RPC client that communicates over a Unix socket.
@@ -92,7 +94,7 @@ func getAllSupervisorProcessInfo(socketPath, rpcEndpoint string) ([]ProcessInfo,
 //	socketPath: "/var/run/supervisor.sock"
 //	rpcEndpoint: "http://localhost/RPC2"
 func SendDaemonStatus(daemonIDs []string, socketPath, rpcEndpoint string) error {
-	var statuses []DaemonStatus
+	statusMap := make(map[string]*DaemonStatus)
 
 	// If no daemon IDs are provided, retrieve status for all daemons.
 	if len(daemonIDs) == 0 {
@@ -101,68 +103,46 @@ func SendDaemonStatus(daemonIDs []string, socketPath, rpcEndpoint string) error 
 			return fmt.Errorf("failed to retrieve all process info: %w", err)
 		}
 		for _, info := range allInfos {
-			var status string
-			var errMsg string
-			var uptime int64
-			if info.State == 20 { // Supervisor defines state 20 as RUNNING.
-				status = "running"
-				if info.Start > 0 {
-					uptime = info.Now - info.Start
-				}
-			} else {
-				status = "not_running"
-				errMsg = fmt.Sprintf("Process state: %s", info.Statename)
-			}
-			statuses = append(statuses, DaemonStatus{
-				DaemonID:    info.Name, // Using the process name as the daemon id.
-				Status:      status,
-				Error:       errMsg,
-				Uptime:      uptime,
-				Group:       info.Group,
-				Statename:   info.Statename,
-				Description: info.Description,
-			})
+			updateDaemonGroupStatus(statusMap, &info)
 		}
 	} else {
 		// Retrieve status for the provided daemon IDs.
 		for _, id := range daemonIDs {
-			var status string
-			var errMsg string
-			var uptime int64
-
 			info, err := getSupervisorProcessInfo(socketPath, rpcEndpoint, id)
 			if err != nil {
-				status = "not_running"
-				errMsg = err.Error()
 				log.Printf("Error retrieving process info for %s: %v", id, err)
-				statuses = append(statuses, DaemonStatus{
-					DaemonID: id,
-					Status:   status,
-					Error:    errMsg,
-				})
+				statusMap[id] = &DaemonStatus{
+					DaemonID:  id,
+					Status:    "not_running",
+					Error:     err.Error(),
+					Processes: []ProcessInfo{},
+				}
 				continue
 			}
-
-			if info.State == 20 {
-				status = "running"
-				if info.Start > 0 {
-					uptime = info.Now - info.Start
-				}
-			} else {
-				status = "not_running"
-				errMsg = fmt.Sprintf("Process state: %s", info.Statename)
-			}
-
-			statuses = append(statuses, DaemonStatus{
-				DaemonID:    id,
-				Status:      status,
-				Error:       errMsg,
-				Uptime:      uptime,
-				Group:       info.Group,
-				Statename:   info.Statename,
-				Description: info.Description,
-			})
+			updateDaemonGroupStatus(statusMap, info)
 		}
+	}
+
+	// Convert map to slice
+	var statuses []DaemonStatus
+	for _, status := range statusMap {
+		// Determine the final group-level status
+		runningCount := 0
+		for _, p := range status.Processes {
+			if p.State == 20 { // RUNNING
+				runningCount++
+			}
+		}
+
+		if runningCount == len(status.Processes) {
+			status.Status = "fully_running"
+		} else if runningCount > 0 {
+			status.Status = "partially_running"
+		} else {
+			status.Status = "not_running"
+		}
+
+		statuses = append(statuses, *status)
 	}
 
 	payload := map[string]interface{}{
@@ -171,12 +151,48 @@ func SendDaemonStatus(daemonIDs []string, socketPath, rpcEndpoint string) error 
 	}
 
 	payloadJSON, _ := json.Marshal(payload)
-	log.Printf("Sending payload: %s", payloadJSON)
+	log.Printf("Sending grouped payload: %s", payloadJSON)
 
 	if err := sendStatusWebhook(payload); err != nil {
 		return fmt.Errorf("error sending webhook: %w", err)
 	}
 
-	logger.Infof("Supervisor statuses sent successfully: %+v", statuses)
+	logger.Infof("Grouped supervisor statuses by Group sent successfully: %+v", statuses)
 	return nil
+}
+
+// updateDaemonGroupStatus groups the statuses of processes by their group and adds process details.
+func updateDaemonGroupStatus(statusMap map[string]*DaemonStatus, info *ProcessInfo) {
+	if info.Group == "" {
+		info.Group = "unknown" // Handle cases where group is missing
+	}
+
+	if _, exists := statusMap[info.Group]; !exists {
+		statusMap[info.Group] = &DaemonStatus{
+			DaemonID:    info.Group, // Use the group name as the daemon ID
+			Status:      "not_running",
+			Uptime:      0,
+			Error:       "",
+			Group:       info.Group,
+			Statename:   info.Statename,
+			Description: info.Description,
+			Processes:   []ProcessInfo{},
+		}
+	}
+
+	status := statusMap[info.Group]
+
+	// Calculate uptime for this specific process
+	uptime := int64(0)
+	if info.State == 20 && info.Start > 0 {
+		uptime = info.Now - info.Start
+	}
+
+	// Store process details with calculated uptime
+	info.Uptime = uptime
+	status.Processes = append(status.Processes, *info)
+
+	if uptime > status.Uptime {
+		status.Uptime = uptime
+	}
 }
