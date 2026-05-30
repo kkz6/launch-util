@@ -92,14 +92,6 @@ func runModel(model config.ModelConfig, dbConfig config.SubConfig) (err error) {
 		db = &PostgreSQL{Base: base}
 	case "mongodb":
 		db = &MongoDB{Base: base}
-	case "sqlite":
-		db = &SQLite{Base: base}
-	case "mssql":
-		db = &MSSQL{Base: base}
-	case "influxdb2":
-		db = &InfluxDB2{Base: base}
-	case "etcd":
-		db = &Etcd{Base: base}
 	default:
 		logger.Warn(fmt.Errorf("model: %s databases.%s config `type: %s`, but is not implement", model.Name, dbConfig.Name, dbConfig.Type))
 		return

@@ -88,20 +88,11 @@ func new(model config.ModelConfig, archivePath string, storageConfig config.SubC
 	switch storageConfig.Type {
 	case "local":
 		s = &Local{Base: base}
-	case "webdav":
-		s = &WebDAV{Base: base}
-	case "ftp":
-		s = &FTP{Base: base}
-	case "scp":
-		s = &SCP{Base: base}
-	case "sftp":
-		s = &SFTP{Base: base}
-	case "gcs":
-		s = &GCS{Base: base}
 	case "s3":
+		// Covers all S3-compatible providers the platform offers
+		// (AWS S3, DigitalOcean Spaces, Backblaze B2, Wasabi) via a
+		// custom endpoint + force_path_style.
 		s = &S3{Base: base}
-	case "azure":
-		s = &Azure{Base: base}
 	default:
 		logger.Errorf("[%s] storage type has not implement.", storageConfig.Type)
 	}

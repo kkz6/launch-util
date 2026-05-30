@@ -1,0 +1,58 @@
+# Test fixture for the slimmed Launch agent.
+# Mirrors launch.example.yml: storages are s3 + local only; databases
+# are the engines the platform manages (postgresql / mysql / redis /
+# mariadb / mongodb). Consumed by config + (historically) database tests.
+
+models:
+  app_full:
+    schedule:
+      cron: "0 2 * * *"
+    compress_with:
+      type: tgz
+    default_storage: s3
+    storages:
+      local:
+        type: local
+        keep: 10
+        path: /var/backups/launch
+      s3:
+        type: s3
+        keep: 20
+        bucket: my-launch-backups
+        region: us-east-1
+        access_key_id: $S3_ACCESS_KEY_ID
+        secret_access_key: $S3_SECRET_ACCESS_KEY
+    databases:
+      app_postgres:
+        type: postgresql
+        host: 127.0.0.1
+        port: 5432
+        database: app_production
+        username: postgres
+        password: secret-pg
+      app_mysql:
+        type: mysql
+        host: 127.0.0.1
+        port: 3306
+        database: app_production
+        username: root
+        password: secret-my
+      app_redis:
+        type: redis
+        mode: sync
+        rdb_path: /var/lib/redis/dump.rdb
+        invoke_save: true
+        password: secret-redis
+    archive:
+      includes:
+        - /etc/nginx/nginx.conf
+        - /home/app/.env
+      excludes:
+        - /home/app/.ssh/known_hosts
+
+  minimal:
+    default_storage: local
+    storages:
+      local:
+        type: local
+        path: /tmp/backup

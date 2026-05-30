@@ -1,72 +1,81 @@
 # Launch Agent config example
-# -----------------------
-# Put this file in follow place:
-# ~/.launcher/launch.yml or /etc/launch-agent/launch.yml
+# -----------------------------
+# Install location (the agent searches these in order):
+#   ./launch.yml
+#   ~/.launcher/launch.yml
+#   /etc/launch-agent/launch.yml
+#
+# The Launch platform (launch-go) generates this file on the server and
+# restarts the agent. Storage is S3-compatible or local only; databases
+# are mysql / mariadb / postgresql / redis / mongodb.
 
 models:
-  base_test:
+  example_app:
+    # Per-model webhook the agent POSTs run status to. The platform sets
+    # this to a dispatch-token URL: <app>/backup/<backup_id>/<token>.
     webhook:
-      url: http://localhost:3000/api/backup-notifiy.json
+      url: https://launchctl.io/backup/01ARZ3NDEKTSV4RRFFQ69G5FAV/REPLACE_WITH_DISPATCH_TOKEN
       method: POST
       headers:
-        Authorization: 'Bearer this-is-token'
+        Content-Type: application/json
     schedule:
-      cron: "* * * * *"
+      cron: "0 2 * * *"
     compress_with:
       type: tgz
-    default_storage: local
+    default_storage: s3
     storages:
+      # Local copy on the server (optional second target / staging).
       local:
         type: local
         keep: 10
-        path: /Users/jason/Downloads/backup1
-      scp:
-        type: scp
-        keep: 10
-        path: ~/backup
-        host: your-host.com
-        private_key: ~/.ssh/id_rsa
-        username: ubuntu
-        password: password
-        timeout: 300
+        path: /var/backups/launch
+      # One S3 backend covers AWS S3, DigitalOcean Spaces, Backblaze B2,
+      # and Wasabi. For non-AWS providers set `endpoint` + (usually)
+      # `force_path_style: true`.
       s3:
         type: s3
         keep: 20
-        bucket: gobackup-test
-        region: ap-southeast-1
-        path: backups
-        access_key_id: xxxxxxxx
-        secret_access_key: xxxxxxxxxxxx
+        bucket: my-launch-backups
+        region: us-east-1
+        path: backups/example_app
+        endpoint: ""              # e.g. https://nyc3.digitaloceanspaces.com
+        force_path_style: false   # true for Spaces / Wasabi / MinIO
+        access_key_id: $S3_ACCESS_KEY_ID
+        secret_access_key: $S3_SECRET_ACCESS_KEY
     databases:
-      dummy_test:
+      app_postgres:
+        type: postgresql
+        host: 127.0.0.1
+        port: 5432
+        database: app_production
+        username: postgres
+        password: $DB_PASSWORD
+      app_mysql:
         type: mysql
-        host: localhost
+        host: 127.0.0.1
         port: 3306
-        database: dummy_test
+        database: app_production
         username: root
-        password: 123456
-      redis1:
+        password: $DB_PASSWORD
+      app_redis:
         type: redis
         mode: sync
-        rdb_path: /var/db/redis/dump.rdb
+        rdb_path: /var/lib/redis/dump.rdb
         invoke_save: true
-        password: 456123
-      postgresql:
-        type: postgresql
-        host: localhost
+        password: $REDIS_PASSWORD
     archive:
       includes:
-        - /home/ubuntu/.ssh/
         - /etc/nginx/nginx.conf
-        - /etc/redis/redis.conf
-        - /etc/logrotate.d/
+        - /home/app/.env
       excludes:
-        - /home/ubuntu/.ssh/known_hosts
-        - /etc/logrotate.d/syslog
+        - /home/app/.ssh/known_hosts
+
+# Pulse reports host resource usage (load / disk / memory) back to the
+# platform on a heartbeat. Independent of backup models.
 pulse:
   enabled: false
   webhook:
-    url: http://localhost:3000/api/backup-notifiy.json
+    url: https://launchctl.io/api/pulse
     method: POST
     headers:
-      Authorization: 'Bearer this-is-token'
+      Content-Type: application/json
