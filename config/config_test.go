@@ -9,7 +9,7 @@ import (
 )
 
 var (
-	testConfigFile = "../gobackup_test.yml"
+	testConfigFile = "../launch_test.yml"
 )
 
 func init() {
@@ -22,109 +22,96 @@ func init() {
 
 func TestModelsLength(t *testing.T) {
 	assert.Equal(t, Exist, true)
-	assert.Equal(t, len(Models), 5)
+	assert.Equal(t, len(Models), 2)
 }
 
 func TestModel(t *testing.T) {
-	model := GetModelConfigByName("base_test")
+	model := GetModelConfigByName("app_full")
 
-	assert.Equal(t, model.Name, "base_test")
+	assert.Equal(t, model.Name, "app_full")
+
 	// compress_with
 	assert.Equal(t, model.CompressWith.Type, "tgz")
 	assert.NotNil(t, model.CompressWith.Viper)
 
-	assert.Equal(t, model.DefaultStorage, "local")
+	// storages — s3 + local only (the slimmed backend set)
+	assert.Equal(t, model.DefaultStorage, "s3")
 	assert.Equal(t, model.Storages["local"].Type, "local")
-	assert.Equal(t, model.Storages["local"].Viper.GetString("path"), "/Users/jason/Downloads/backup1")
+	assert.Equal(t, model.Storages["local"].Viper.GetString("path"), "/var/backups/launch")
+	assert.Equal(t, model.Storages["s3"].Type, "s3")
+	assert.Equal(t, model.Storages["s3"].Viper.GetString("bucket"), "my-launch-backups")
+	assert.Equal(t, model.Storages["s3"].Viper.GetString("region"), "us-east-1")
 
-	assert.Equal(t, model.Storages["scp"].Type, "scp")
-	assert.Equal(t, model.Storages["scp"].Viper.GetString("host"), "your-host.com")
-
-	// databases
+	// databases — postgresql / mysql / redis
 	assert.Len(t, model.Databases, 3)
 
-	// mysql
-	db := model.GetDatabaseByName("dummy_test")
-	assert.Equal(t, db.Name, "dummy_test")
-	assert.Equal(t, db.Type, "mysql")
-	assert.Equal(t, db.Viper.GetString("host"), "localhost")
-	assert.Equal(t, db.Viper.GetString("port"), "3306")
-	assert.Equal(t, db.Viper.GetString("database"), "dummy_test")
-	assert.Equal(t, db.Viper.GetString("username"), "root")
-	assert.Equal(t, db.Viper.GetString("password"), "123456")
+	db := model.GetDatabaseByName("app_postgres")
+	assert.Equal(t, db.Name, "app_postgres")
+	assert.Equal(t, db.Type, "postgresql")
+	assert.Equal(t, db.Viper.GetString("host"), "127.0.0.1")
+	assert.Equal(t, db.Viper.GetString("port"), "5432")
+	assert.Equal(t, db.Viper.GetString("database"), "app_production")
+	assert.Equal(t, db.Viper.GetString("username"), "postgres")
+	assert.Equal(t, db.Viper.GetString("password"), "secret-pg")
 
-	// redis
-	db = model.GetDatabaseByName("redis1")
-	assert.Equal(t, db.Name, "redis1")
+	db = model.GetDatabaseByName("app_mysql")
+	assert.Equal(t, db.Name, "app_mysql")
+	assert.Equal(t, db.Type, "mysql")
+	assert.Equal(t, db.Viper.GetString("port"), "3306")
+	assert.Equal(t, db.Viper.GetString("username"), "root")
+
+	db = model.GetDatabaseByName("app_redis")
+	assert.Equal(t, db.Name, "app_redis")
 	assert.Equal(t, db.Type, "redis")
 	assert.Equal(t, db.Viper.GetString("mode"), "sync")
-	assert.Equal(t, db.Viper.GetString("rdb_path"), "/var/db/redis/dump.rdb")
+	assert.Equal(t, db.Viper.GetString("rdb_path"), "/var/lib/redis/dump.rdb")
 	assert.Equal(t, db.Viper.GetBool("invoke_save"), true)
-	assert.Equal(t, db.Viper.GetString("password"), "456123")
-
-	// redis
-	db = model.GetDatabaseByName("postgresql")
-	assert.Equal(t, db.Name, "postgresql")
-	assert.Equal(t, db.Type, "postgresql")
-	assert.Equal(t, db.Viper.GetString("host"), "localhost")
+	assert.Equal(t, db.Viper.GetString("password"), "secret-redis")
 
 	// archive
 	includes := model.Archive.GetStringSlice("includes")
-	assert.Len(t, includes, 4)
-	assert.Contains(t, includes, "/home/ubuntu/.ssh/")
+	assert.Len(t, includes, 2)
 	assert.Contains(t, includes, "/etc/nginx/nginx.conf")
+	assert.Contains(t, includes, "/home/app/.env")
 
 	excludes := model.Archive.GetStringSlice("excludes")
-	assert.Len(t, excludes, 2)
-	assert.Contains(t, excludes, "/home/ubuntu/.ssh/known_hosts")
+	assert.Len(t, excludes, 1)
+	assert.Contains(t, excludes, "/home/app/.ssh/known_hosts")
 
-	// schedule
+	// schedule (cron-only — the `every`/`at` forms were removed)
 	schedule := model.Schedule
 	assert.Equal(t, true, schedule.Enabled)
-	assert.Equal(t, "5 4 * * sun", schedule.Cron)
+	assert.Equal(t, "0 2 * * *", schedule.Cron)
 }
 
-func Test_otherModels(t *testing.T) {
-	model := GetModelConfigByName("normal_files")
-
-	// default_storage
-	assert.Equal(t, model.DefaultStorage, "scp")
-
-	// schedule
-	schedule := model.Schedule
-	assert.Equal(t, true, schedule.Enabled)
-	assert.Equal(t, "", schedule.Cron)
-	model = GetModelConfigByName("test_model")
+// TestMinimalModel covers a model with no schedule (schedule disabled)
+// and only a local storage.
+func TestMinimalModel(t *testing.T) {
+	model := GetModelConfigByName("minimal")
+	assert.Equal(t, model.Name, "minimal")
+	assert.Equal(t, model.DefaultStorage, "local")
+	assert.Equal(t, model.Storages["local"].Type, "local")
 	assert.Equal(t, false, model.Schedule.Enabled)
 }
 
+// Test_ScheduleConfig_String pins the current String() contract: cron
+// when enabled+cron is set, otherwise "disabled". (The legacy every/at
+// schedule forms were removed from this fork.)
 func Test_ScheduleConfig_String(t *testing.T) {
-	schedule := ScheduleConfig{
-		Enabled: true,
-	}
-	assert.Equal(t, schedule.String(), "every 1day at 0:30")
+	// Enabled but no cron → still "disabled" (nothing to schedule).
+	assert.Equal(t, ScheduleConfig{Enabled: true}.String(), "disabled")
 
-	schedule = ScheduleConfig{
-		Enabled: true,
-	}
-	assert.Equal(t, schedule.String(), "every 1day")
+	// Enabled + cron → "cron <expr>".
+	assert.Equal(t, ScheduleConfig{Enabled: true, Cron: "5 4 * * sun"}.String(), "cron 5 4 * * sun")
 
-	schedule = ScheduleConfig{
-		Enabled: true,
-		Cron:    "5 4 * * sun",
-	}
-
-	assert.Equal(t, schedule.String(), "cron 5 4 * * sun")
-
-	schedule = ScheduleConfig{
-		Enabled: false,
-	}
-	assert.Equal(t, schedule.String(), "disabled")
+	// Disabled → "disabled".
+	assert.Equal(t, ScheduleConfig{Enabled: false}.String(), "disabled")
 }
 
+// TestExpandEnv verifies $VAR references in the config are expanded from
+// the environment at load time.
 func TestExpandEnv(t *testing.T) {
-	model := GetModelConfigByName("expand_env")
-
+	model := GetModelConfigByName("app_full")
 	assert.Equal(t, model.Storages["s3"].Type, "s3")
 	assert.Equal(t, model.Storages["s3"].Viper.GetString("access_key_id"), "xxxxxxxxxxxxxxxxxxxx")
 	assert.Equal(t, model.Storages["s3"].Viper.GetString("secret_access_key"), "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx")
@@ -142,28 +129,20 @@ func TestWatchConfigToReload(t *testing.T) {
 	lastUpdatedAt := UpdatedAt.UnixNano()
 	time.Sleep(1 * time.Millisecond)
 
-	// Touch `testConfigFile` to trigger file changes event
+	// Touch testConfigFile to trigger a file-change event.
 	err = updateFile(testConfigFile)
 	assert.Nil(t, err)
 
-	// Wait for reload
+	// Wait for reload.
 	time.Sleep(10 * time.Millisecond)
 
-	// check config reload updated_at
 	assert.NotEqual(t, lastUpdatedAt, UpdatedAt.UnixNano())
 }
 
 func updateFile(path string) error {
-	// Open file and write it again without any changes
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return err
 	}
-
-	err = os.WriteFile(path, data, 0644)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return os.WriteFile(path, data, 0644)
 }

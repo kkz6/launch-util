@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        go-version: ["1.21"]
+        go-version: ["1.23"]
     steps:
       - uses: actions/checkout@v4
       - name: Setup Go
@@ -21,14 +21,19 @@ jobs:
         with:
           go-version: ${{ matrix.go-version }}
           check-latest: true
-      - name: Build ARM64
-        run: GOOS=linux GOARCH=arm64 go build -o launch-util-linux-arm64 .
-      - name: Build ARM
-        run: GOOS=linux GOARCH=arm go build -o launch-util-linux-arm .
-      - name: Build AMD64
-        run: GOOS=linux GOARCH=amd64 go build -o launch-util-linux-amd64 .
-      - name: Build AMD
-        run: GOOS=linux GOARCH=386 go build -o launch-util-linux-amd .
+      # Inject the release version into the binary so `launch-agent
+      # --version` reports the real tag (not the default "master"). The
+      # leading "v" is stripped because the platform's install script
+      # prepends its own "v" when comparing against the release tag.
+      - name: Build binaries
+        run: |
+          VERSION="${{ github.event.release.tag_name }}"
+          VERSION="${VERSION#v}"
+          LDFLAGS="-s -w -X main.version=${VERSION}"
+          GOOS=linux GOARCH=arm64 go build -ldflags "${LDFLAGS}" -o launch-util-linux-arm64 .
+          GOOS=linux GOARCH=arm   go build -ldflags "${LDFLAGS}" -o launch-util-linux-arm .
+          GOOS=linux GOARCH=amd64 go build -ldflags "${LDFLAGS}" -o launch-util-linux-amd64 .
+          GOOS=linux GOARCH=386   go build -ldflags "${LDFLAGS}" -o launch-util-linux-amd .
       - name: Upload Release Asset
         uses: actions/upload-release-asset@v1
         env:

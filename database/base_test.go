@@ -8,11 +8,10 @@ import (
 	"github.com/longbridgeapp/assert"
 )
 
-func init() {
-	if err := config.Init("../gobackup_test.yml"); err != nil {
-		panic(err.Error())
-	}
-}
+// These tests build ModelConfig / SubConfig inline, so there's no config
+// fixture to load here (the old init() loaded `../gobackup_test.yml`,
+// which this fork never shipped — that's why the package paniced on
+// `go test`).
 
 type Monkey struct {
 	Base

@@ -15,11 +15,12 @@ import (
 	"github.com/gigcodes/launch-util/model"
 	"github.com/gigcodes/launch-util/psutil"
 	"github.com/gigcodes/launch-util/rpc"
+	"github.com/gigcodes/launch-util/s3cmd"
 	"github.com/gigcodes/launch-util/scheduler"
 )
 
 const (
-	usage = "Backup your databases, files to FTP / SCP / S3 / GCS and other cloud storages."
+	usage = "Launch backup agent — dump databases and files to S3-compatible or local storage."
 )
 
 var (
@@ -86,6 +87,50 @@ func main() {
 				}
 				modelNames = append(ctx.StringSlice("model"), ctx.Args().Slice()...)
 				return perform(modelNames)
+			},
+		},
+		{
+			// One-shot S3 ops (upload / download / delete). Let the
+			// platform drive backups, restores, and retention pruning
+			// without installing the `aws` CLI on the server — the agent
+			// already links the AWS SDK. No config file is read.
+			// Credentials come from the environment so they never appear
+			// in `ps`.
+			Name:  "upload",
+			Usage: "Upload a file to S3-compatible storage (creds from AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY env)",
+			Flags: append(s3CommonFlags(),
+				&cli.StringFlag{Name: "file", Required: true, Usage: "Local file to upload"},
+				&cli.StringFlag{Name: "key", Required: true, Usage: "Object key within the bucket"},
+				&cli.StringFlag{Name: "storage-class", Usage: "Optional S3 storage class"},
+			),
+			Action: func(ctx *cli.Context) error {
+				location, err := s3cmd.Upload(s3ConfigFromCtx(ctx), ctx.String("file"), ctx.String("key"), ctx.String("storage-class"))
+				if err != nil {
+					return err
+				}
+				fmt.Println(location)
+				return nil
+			},
+		},
+		{
+			Name:  "download",
+			Usage: "Download an S3 object to a local file (creds from env)",
+			Flags: append(s3CommonFlags(),
+				&cli.StringFlag{Name: "key", Required: true, Usage: "Object key within the bucket"},
+				&cli.StringFlag{Name: "dest", Required: true, Usage: "Local destination path"},
+			),
+			Action: func(ctx *cli.Context) error {
+				return s3cmd.Download(s3ConfigFromCtx(ctx), ctx.String("key"), ctx.String("dest"))
+			},
+		},
+		{
+			Name:  "delete",
+			Usage: "Delete an S3 object (idempotent — a missing key is a no-op; creds from env)",
+			Flags: append(s3CommonFlags(),
+				&cli.StringFlag{Name: "key", Required: true, Usage: "Object key within the bucket"},
+			),
+			Action: func(ctx *cli.Context) error {
+				return s3cmd.Delete(s3ConfigFromCtx(ctx), ctx.String("key"))
 			},
 		},
 		{
@@ -205,6 +250,29 @@ func main() {
 
 func initApplication() error {
 	return config.Init(configFile)
+}
+
+// s3CommonFlags are the destination/auth flags shared by the upload,
+// download, and delete commands. Credentials are NOT flags — they come
+// from the environment so they never land in `ps`.
+func s3CommonFlags() []cli.Flag {
+	return []cli.Flag{
+		&cli.StringFlag{Name: "bucket", Required: true, Usage: "S3 bucket"},
+		&cli.StringFlag{Name: "region", Usage: "Region, e.g. us-east-1"},
+		&cli.StringFlag{Name: "endpoint", Usage: "Custom S3 endpoint (Spaces / B2 / Wasabi / MinIO)"},
+		&cli.BoolFlag{Name: "force-path-style", Usage: "Use path-style addressing (most non-AWS S3)"},
+	}
+}
+
+func s3ConfigFromCtx(ctx *cli.Context) s3cmd.Config {
+	return s3cmd.Config{
+		Bucket:          ctx.String("bucket"),
+		Region:          ctx.String("region"),
+		Endpoint:        ctx.String("endpoint"),
+		ForcePathStyle:  ctx.Bool("force-path-style"),
+		AccessKeyID:     os.Getenv("AWS_ACCESS_KEY_ID"),
+		SecretAccessKey: os.Getenv("AWS_SECRET_ACCESS_KEY"),
+	}
 }
 
 func perform(modelNames []string) error {

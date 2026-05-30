@@ -55,7 +55,11 @@ func newUnixSocketXMLRPCClient(socketPath, rpcEndpoint string) (*xmlrpc.Client, 
 }
 
 // getSupervisorProcessInfo connects to Supervisor's XML-RPC endpoint via Unix socket and retrieves process info.
-func getSupervisorProcessInfo(socketPath, rpcEndpoint, processID string) (*ProcessInfo, error) {
+//
+// Declared as a package var (not a plain func) so tests can swap in a
+// stub without a live Supervisor socket. Production behaviour is
+// unchanged — callers invoke it identically.
+var getSupervisorProcessInfo = func(socketPath, rpcEndpoint, processID string) (*ProcessInfo, error) {
 	client, err := newUnixSocketXMLRPCClient(socketPath, rpcEndpoint)
 	if err != nil {
 		return nil, err
@@ -73,7 +77,9 @@ func sendStatusWebhook(payload map[string]interface{}) error {
 	return webhook.Notify(payload)
 }
 
-func getAllSupervisorProcessInfo(socketPath, rpcEndpoint string) ([]ProcessInfo, error) {
+// getAllSupervisorProcessInfo is a package var for the same test-seam
+// reason as getSupervisorProcessInfo above.
+var getAllSupervisorProcessInfo = func(socketPath, rpcEndpoint string) ([]ProcessInfo, error) {
 	client, err := newUnixSocketXMLRPCClient(socketPath, rpcEndpoint)
 	if err != nil {
 		return nil, err

@@ -48,8 +48,8 @@ func TestUpdateDaemonGroupStatus(t *testing.T) {
 	// Assert that the worker-group exists in the map
 	assert.True(t, statusMap["worker-group"] != nil)
 
-	// The highest uptime should be taken (process2 has the highest uptime)
-	assert.Equal(t, int64(7034), statusMap["worker-group"].Uptime)
+	// The highest uptime should be taken (process2: Now-Start = 1700005000-1699998000 = 7000)
+	assert.Equal(t, int64(7000), statusMap["worker-group"].Uptime)
 
 	// Ensure all processes are stored in the group
 	assert.Equal(t, len(statusMap["worker-group"].Processes), 3)
@@ -105,9 +105,14 @@ func TestSendDaemonStatus_ErrorHandling(t *testing.T) {
 		return nil, fmt.Errorf("Failed to fetch process info")
 	}
 
-	// Call function with a non-existing daemon ID
+	// Call function with a non-existing daemon ID.
 	err := SendDaemonStatus([]string{"non-existing"}, "/var/run/supervisor.sock", "http://localhost/RPC2")
 
-	// Validate that an error is returned
-	assert.NotNil(t, err)
+	// A per-daemon lookup failure is NOT fatal: SendDaemonStatus is a
+	// status reporter, so it records the daemon as not_running (with the
+	// error attached) and still completes, so the platform learns which
+	// daemons are down rather than getting nothing back. The call only
+	// returns an error if the *whole* operation fails (e.g. the
+	// getAllProcessInfo path, or the status webhook itself).
+	assert.Nil(t, err)
 }
